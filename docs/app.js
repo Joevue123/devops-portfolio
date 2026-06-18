@@ -214,6 +214,224 @@ const PROJECTS = [
     ],
     path: 'tier-1-foundational/10-kubernetes-app-deployment',
   },
+
+  // ── Tier 2: Intermediate ──────────────────────────────────────────
+  {
+    id: '11',
+    title: 'Helm Chart — Microservice Packaging',
+    tier: 'tier-2',
+    icon: '⛵',
+    summary: 'Production-ready Helm chart with conditional HPA/Ingress, _helpers.tpl labels, checksum-based rollouts, and separate prod values — deployable with helm upgrade --atomic.',
+    problem: 'Copying raw YAML between environments causes drift and deployment errors.',
+    skills: ['helm', 'kubernetes', 'templating'],
+    files: [
+      'myapp/Chart.yaml             — chart metadata and versioning',
+      'myapp/values.yaml            — safe defaults for dev',
+      'myapp/values-prod.yaml       — production overrides',
+      'myapp/templates/_helpers.tpl — reusable name and label macros',
+      'myapp/templates/deployment.yaml',
+      'myapp/templates/hpa.yaml     — conditionally rendered',
+    ],
+    decisions: [
+      '--atomic on upgrade — auto-rollback if any resource fails healthy',
+      'checksum/config annotation — rolling restart when ConfigMap changes',
+      'Conditional HPA/Ingress — disabled in dev with hpa.enabled: false',
+      'No secrets in values.yaml — injected at deploy time via externalSecretName',
+    ],
+    path: 'tier-2-intermediate/11-helm-chart',
+  },
+  {
+    id: '12',
+    title: 'ArgoCD GitOps Pipeline',
+    tier: 'tier-2',
+    icon: '🔄',
+    summary: 'App of Apps pattern: one root Application deploys all others. selfHeal reverts manual kubectl changes, AppProject enforces RBAC on repos and namespaces.',
+    problem: 'Imperative kubectl apply leaves no audit trail and diverges from Git.',
+    skills: ['argocd', 'gitops', 'kubernetes', 'ci-cd'],
+    files: [
+      'argocd/apps/root-app.yaml    — App of Apps entrypoint',
+      'argocd/apps/api.yaml         — Helm-sourced application',
+      'argocd/projects/portfolio.yaml — RBAC: allowed repos and namespaces',
+      'scripts/bootstrap-argocd.sh',
+    ],
+    decisions: [
+      'selfHeal: true — any manual kubectl change reverted within 3 minutes',
+      'ignoreDifferences for replicas — HPA manages this, not ArgoCD',
+      'AppProject RBAC — teams can only deploy to their own namespaces',
+      'Sync waves — CRDs deploy before apps that depend on them',
+    ],
+    path: 'tier-2-intermediate/12-argocd-gitops',
+  },
+  {
+    id: '13',
+    title: 'Prometheus + Grafana Stack',
+    tier: 'tier-2',
+    icon: '📈',
+    summary: 'Full observability: recording rules pre-compute SLO math, alert rules fire on symptoms (error rate, latency), AlertManager routes critical → PagerDuty, warning → Slack.',
+    problem: "You can't fix what you can't see — scattered metrics mean slow MTTR.",
+    skills: ['prometheus', 'grafana', 'alertmanager', 'docker'],
+    files: [
+      'prometheus/prometheus.yml          — scrape config',
+      'prometheus/rules/api-alerts.yml    — recording + alert rules',
+      'alertmanager/alertmanager.yml      — routing, inhibition, PagerDuty',
+      'docker-compose.yml                 — full local stack',
+    ],
+    decisions: [
+      'Alert on symptoms not causes — error rate > 1%, not CPU > 80%',
+      'Recording rules for SLO math — pre-computed, dashboards load fast',
+      'Inhibition rules — suppress downstream alerts when root cause fires',
+      'Watchdog alert blackholed — avoids alert fatigue from healthcheck spam',
+    ],
+    path: 'tier-2-intermediate/13-prometheus-grafana',
+  },
+  {
+    id: '14',
+    title: 'Vault Secrets Management',
+    tier: 'tier-2',
+    icon: '🔐',
+    summary: 'Dynamic DB credentials with 1h TTL (Vault creates unique PostgreSQL users per pod), static KV secrets, Kubernetes auth via ServiceAccount, agent sidecar injection.',
+    problem: 'Shared DB passwords and base64 K8s Secrets are a security liability.',
+    skills: ['vault', 'security', 'kubernetes', 'docker'],
+    files: [
+      'scripts/init-vault.sh           — enables KV, database, K8s auth',
+      'vault/policies/api-policy.hcl   — least-privilege HCL policy',
+      'k8s/vault-agent-sidecar.yaml    — annotation-driven secret injection',
+      'docker-compose.yml',
+    ],
+    decisions: [
+      'Dynamic DB creds — breach = revoke one user, not rotate shared password',
+      'Agent sidecar — secrets on tmpfs volume, never stored in etcd',
+      'Short TTLs (1h) — leaked credential is time-bounded',
+      'Policies as code in Git — no manual vault policy write in production',
+    ],
+    path: 'tier-2-intermediate/14-vault-secrets',
+  },
+  {
+    id: '15',
+    title: 'Istio Service Mesh',
+    tier: 'tier-2',
+    icon: '🕸️',
+    summary: 'mTLS STRICT mode across all pods, canary traffic split (90/10) via VirtualService weights, circuit breaker via outlierDetection, retry/timeout policies — zero app code changes.',
+    problem: 'Microservices talk over plain HTTP with no auth, no retries, no visibility.',
+    skills: ['istio', 'kubernetes', 'mtls', 'canary'],
+    files: [
+      'k8s/peer-authentication.yaml     — STRICT mTLS namespace-wide',
+      'k8s/destination-rule.yaml        — circuit breaker + connection pool',
+      'k8s/virtual-service-canary.yaml  — 90/10 weighted traffic split',
+      'k8s/gateway.yaml                 — TLS ingress gateway',
+    ],
+    decisions: [
+      'PeerAuthentication STRICT — zero-trust; pods without cert are rejected',
+      'Canary via weights, not DNS — no TTL wait, instant rollback',
+      'outlierDetection — ejects misbehaving pods from load balancing pool',
+      'Header-based forced canary — specific testers always hit v2',
+    ],
+    path: 'tier-2-intermediate/15-istio-service-mesh',
+  },
+  {
+    id: '16',
+    title: 'KEDA Event-Driven Autoscaling',
+    tier: 'tier-2',
+    icon: '⚡',
+    summary: 'Scale workers to zero on empty SQS queue, scale to 50 pods at 500 messages. Scale API on Prometheus RPS metric. IRSA auth — no stored AWS keys.',
+    problem: 'CPU-based HPA is the wrong signal for queue workers and async workloads.',
+    skills: ['keda', 'kubernetes', 'aws', 'autoscaling'],
+    files: [
+      'k8s/scaledobject-sqs.yaml        — SQS queue depth trigger, scale-to-zero',
+      'k8s/scaledobject-http.yaml       — Prometheus RPS trigger',
+      'k8s/triggerauthentication.yaml   — IRSA pod identity (no stored keys)',
+    ],
+    decisions: [
+      'minReplicaCount: 0 — eliminates idle compute cost on empty queues',
+      'cooldownPeriod: 300s — prevents thrashing on bursty workloads',
+      'IRSA via TriggerAuthentication — no AWS credentials stored anywhere',
+      'ScaledObject → HPA under the hood — Kubernetes-native, no lock-in',
+    ],
+    path: 'tier-2-intermediate/16-keda-autoscaling',
+  },
+  {
+    id: '17',
+    title: 'AWS Lambda Serverless API',
+    tier: 'tier-2',
+    icon: 'λ',
+    summary: 'Full CRUD REST API: Python Lambda on arm64/Graviton + API Gateway v2 + DynamoDB on-demand, all Terraform-managed. X-Ray tracing, CloudWatch logs, IAM least-privilege.',
+    problem: 'Not every workload needs a running server — pay-per-invocation eliminates idle cost.',
+    skills: ['lambda', 'aws', 'terraform', 'python', 'serverless'],
+    files: [
+      'lambda/handler.py    — CRUD handler with DynamoDB (Python 3.12)',
+      'main.tf              — Lambda, API Gateway v2, DynamoDB, IAM',
+      'variables.tf',
+      'outputs.tf           — API Gateway invoke URL',
+    ],
+    decisions: [
+      'arm64 Graviton runtime — 20% cheaper, often faster for Python',
+      'API Gateway v2 (HTTP API) — 70% cheaper than REST API',
+      'On-demand DynamoDB — zero capacity planning, scales to any RPS',
+      'Least-privilege IAM — Lambda can only DynamoDB:GetItem/PutItem/DeleteItem',
+    ],
+    path: 'tier-2-intermediate/17-aws-lambda-serverless',
+  },
+  {
+    id: '18',
+    title: 'Harbor Container Registry',
+    tier: 'tier-2',
+    icon: '⚓',
+    summary: 'Self-hosted OCI registry with Trivy vulnerability scanning (block pull on CRITICAL CVE), project RBAC, robot accounts for CI, and replication rules to ECR.',
+    problem: 'Docker Hub means public images, rate limits, and no control over pulls.',
+    skills: ['harbor', 'docker', 'security', 'registry'],
+    files: [
+      'scripts/setup-harbor.sh         — generates certs, starts docker compose',
+      'scripts/create-robot-account.sh — per-project CI bot accounts',
+    ],
+    decisions: [
+      'Block pull on CRITICAL CVE — enforced at registry, not CI compliance',
+      'Robot accounts for CI — scoped tokens, not shared admin credentials',
+      'Replication to ECR — K8s clusters pull from ECR at deploy time',
+      'Retention policy — auto-delete untagged images after 7 days',
+    ],
+    path: 'tier-2-intermediate/18-harbor-registry',
+  },
+  {
+    id: '19',
+    title: 'Cert-Manager TLS Automation',
+    tier: 'tier-2',
+    icon: '🔏',
+    summary: 'Automatic Let\'s Encrypt wildcard certs via DNS-01/Route53. Renews 30 days before expiry. Staging issuer for testing, production issuer for live. Zero manual cert work.',
+    problem: 'Manually renewing TLS certificates is toil that causes outages when forgotten.',
+    skills: ['cert-manager', 'kubernetes', 'tls', 'aws'],
+    files: [
+      'k8s/cluster-issuer.yaml   — staging + production ClusterIssuers',
+      'k8s/certificate.yaml      — wildcard cert, 90-day validity, renew at 30d',
+      'scripts/verify-cert.sh    — check expiry and provisioning status',
+    ],
+    decisions: [
+      'DNS-01 challenge — enables wildcard certs, works for internal services',
+      'Staging issuer first — no rate limits, test full ACME flow safely',
+      'ClusterIssuer not Issuer — one config works across all namespaces',
+      'IRSA for Route53 — no AWS credentials stored in K8s Secrets',
+    ],
+    path: 'tier-2-intermediate/19-cert-manager-tls',
+  },
+  {
+    id: '20',
+    title: 'Fluent Bit K8s Log Pipeline',
+    tier: 'tier-2',
+    icon: '🪵',
+    summary: 'DaemonSet on every node tails all container logs, enriches with K8s metadata (namespace/pod/labels), drops health check noise, ships to Loki with filesystem buffering.',
+    problem: 'kubectl logs shows one pod and loses history — you need centralized, queryable logs.',
+    skills: ['fluentbit', 'kubernetes', 'loki', 'observability'],
+    files: [
+      'k8s/configmap.yaml    — full Fluent Bit config (INPUT/FILTER/OUTPUT)',
+      'k8s/daemonset.yaml    — hostPath mounts, resource limits, liveness probe',
+    ],
+    decisions: [
+      'SQLite offset DB — survives restarts without re-sending old logs',
+      'Mem_Buf_Limit — caps memory, applies backpressure rather than OOM kill',
+      'Drop /health and /metrics logs — removes noise before pipeline ingestion',
+      'Fluent Bit over Fluentd — 10x lower memory per node',
+    ],
+    path: 'tier-2-intermediate/20-fluentbit-k8s-logging',
+  },
 ];
 
 // ── Rendering ────────────────────────────────────────────────────────────────
@@ -267,9 +485,12 @@ function renderProjects(filter) {
     grid.appendChild(card);
   });
 
-  // Show/hide coming-soon based on filter
+  // Show/hide section headings and coming-soon based on filter
   const comingSoon = document.getElementById('coming-soon');
-  comingSoon.style.display = (filter === 'all') ? '' : 'none';
+  const tier2Heading = document.getElementById('tier-2-heading');
+  const showAll = filter === 'all';
+  comingSoon.style.display = showAll ? '' : 'none';
+  tier2Heading.style.display = showAll ? '' : 'none';
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────

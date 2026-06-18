@@ -1,0 +1,18 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-tls
+  namespace: production
+spec:
+  secretName: api-tls          # Secret created by cert-manager, read by Ingress
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - api.example.com
+    - "*.example.com"          # wildcard — requires DNS-01 challenge
+  duration: 2160h              # 90 days (Let's Encrypt default)
+  renewBefore: 720h            # renew 30 days before expiry
+  privateKey:
+    algorithm: ECDSA
+    size: 256

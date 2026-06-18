@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: portfolio
+  namespace: argocd
+spec:
+  description: Portfolio DevOps projects
+
+  # Only allow deployments from this repo
+  sourceRepos:
+    - https://github.com/Joevue123/devops-portfolio
+    - https://charts.helm.sh/stable
+    - https://prometheus-community.github.io/helm-charts
+
+  # Only allow deployment to these namespaces
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: production
+    - server: https://kubernetes.default.svc
+      namespace: staging
+    - server: https://kubernetes.default.svc
+      namespace: monitoring
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+
+  # Prevent deploying cluster-scoped dangerous resources
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: 'cert-manager.io'
+      kind: ClusterIssuer
+
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota   # only platform team sets quotas

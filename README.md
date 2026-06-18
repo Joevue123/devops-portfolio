@@ -27,9 +27,20 @@
 | 09 | [Ansible Server Hardening](./tier-1-foundational/09-ansible-server-hardening/) | Ansible, roles, idempotent config |
 | 10 | [Kubernetes App Deployment](./tier-1-foundational/10-kubernetes-app-deployment/) | K8s manifests, HPA, Ingress |
 
-## Tier 2 — Intermediate *(coming soon)*
+## Tier 2 — Intermediate
 
-Projects 11–20: Helm charts, ArgoCD GitOps, Prometheus/Grafana, Vault secrets management, Istio service mesh intro.
+| # | Project | Skills |
+|---|---------|--------|
+| 11 | [Helm Chart — Microservice Packaging](./tier-2-intermediate/11-helm-chart/) | Helm, templating, values management |
+| 12 | [ArgoCD GitOps Pipeline](./tier-2-intermediate/12-argocd-gitops/) | ArgoCD, App of Apps, selfHeal, RBAC |
+| 13 | [Prometheus + Grafana Stack](./tier-2-intermediate/13-prometheus-grafana/) | Prometheus, Grafana, AlertManager, PromQL |
+| 14 | [Vault Secrets Management](./tier-2-intermediate/14-vault-secrets/) | Vault, dynamic secrets, K8s auth, sidecar |
+| 15 | [Istio Service Mesh](./tier-2-intermediate/15-istio-service-mesh/) | Istio, mTLS, canary, circuit breaker |
+| 16 | [KEDA Event-Driven Autoscaling](./tier-2-intermediate/16-keda-autoscaling/) | KEDA, SQS, scale-to-zero, IRSA |
+| 17 | [AWS Lambda Serverless API](./tier-2-intermediate/17-aws-lambda-serverless/) | Lambda, API Gateway, DynamoDB, Terraform |
+| 18 | [Harbor Container Registry](./tier-2-intermediate/18-harbor-registry/) | Harbor, Trivy, RBAC, replication |
+| 19 | [Cert-Manager TLS Automation](./tier-2-intermediate/19-cert-manager-tls/) | cert-manager, Let's Encrypt, DNS-01 |
+| 20 | [Fluent Bit K8s Log Pipeline](./tier-2-intermediate/20-fluentbit-k8s-logging/) | Fluent Bit, DaemonSet, Loki |
 
 ## Tier 3 — Advanced *(coming soon)*
 

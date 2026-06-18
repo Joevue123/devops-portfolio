@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: api
+  namespace: production
+spec:
+  hosts:
+    - api-service
+    - api.example.com
+  gateways:
+    - production/api-gateway
+    - mesh   # also applies to in-cluster traffic
+  http:
+    - match:
+        - headers:
+            x-canary:
+              exact: "true"   # force canary for specific testers
+      route:
+        - destination:
+            host: api-service
+            subset: v2
+          weight: 100
+
+    - route:
+        - destination:
+            host: api-service
+            subset: v1
+          weight: 90
+        - destination:
+            host: api-service
+            subset: v2
+          weight: 10
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: gateway-error,connect-failure,retriable-4xx

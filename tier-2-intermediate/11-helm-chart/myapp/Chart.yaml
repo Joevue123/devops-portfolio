@@ -1,0 +1,13 @@
+apiVersion: v2
+name: myapp
+description: Production-ready Helm chart for a Node.js microservice
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - nodejs
+  - api
+  - microservice
+maintainers:
+  - name: Joel Tega
+    email: joevue123@gmail.com

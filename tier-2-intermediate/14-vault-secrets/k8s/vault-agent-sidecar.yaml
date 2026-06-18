@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+      annotations:
+        # Vault Agent sidecar injection annotations
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "api-role"
+        vault.hashicorp.com/agent-inject-secret-db: "database/creds/api-role"
+        vault.hashicorp.com/agent-inject-template-db: |
+          {{- with secret "database/creds/api-role" -}}
+          export DB_USERNAME="{{ .Data.username }}"
+          export DB_PASSWORD="{{ .Data.password }}"
+          {{- end }}
+        # Secret rendered to /vault/secrets/db — sourced by app at startup
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/api/production"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/api/production" -}}
+          export API_KEY="{{ .Data.data.api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: api   # must be bound to Vault K8s auth role
+      containers:
+        - name: api
+          image: myapp:v1.0.0
+          command: ["/bin/sh", "-c"]
+          args:
+            - source /vault/secrets/db && source /vault/secrets/config && node dist/index.js
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
