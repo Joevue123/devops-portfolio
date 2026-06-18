@@ -1,6 +1,6 @@
 'use strict';
 
-const GITHUB_BASE = 'https://github.com/joeltega/devops-portfolio/tree/main';
+const GITHUB_BASE = 'https://github.com/joevue123/devops-portfolio/tree/main';
 
 const PROJECTS = [
   {
