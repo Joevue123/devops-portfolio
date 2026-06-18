@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Enforces Conventional Commits: https://www.conventionalcommits.org/
+# Types: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "${COMMIT_MSG_FILE}")
+
+# Skip merge commits and fixup commits
+if echo "${COMMIT_MSG}" | grep -qE '^(Merge|fixup!|squash!)'; then
+    exit 0
+fi
+
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._-]+\))?(!)?: .{1,100}$'
+
+if ! echo "${COMMIT_MSG}" | grep -qE "${PATTERN}"; then
+    echo ""
+    echo "  ERROR: Commit message does not follow Conventional Commits format."
+    echo ""
+    echo "  Expected format: <type>(<scope>): <description>"
+    echo ""
+    echo "  Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+    echo ""
+    echo "  Examples:"
+    echo "    feat(api): add rate limiting middleware"
+    echo "    fix(auth): handle token expiry edge case"
+    echo "    chore(deps): bump lodash to 4.17.21"
+    echo "    feat!: remove deprecated v1 endpoints (breaking change)"
+    echo ""
+    echo "  Your message: '${COMMIT_MSG}'"
+    echo ""
+    exit 1
+fi

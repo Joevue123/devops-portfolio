@@ -1,0 +1,13 @@
+---
+- name: restart sshd
+  service:
+    name: sshd
+    state: restarted
+
+- name: reload ufw
+  command: ufw reload
+
+- name: restart auditd
+  service:
+    name: auditd
+    state: restarted

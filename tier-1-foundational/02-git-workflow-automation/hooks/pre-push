@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Validates branch naming and prevents accidental force-push indicators
+
+REMOTE="$1"
+URL="$2"
+
+PROTECTED_BRANCHES="^(main|master|production|staging)$"
+BRANCH_PATTERN="^(feat|fix|chore|hotfix|refactor|test|docs|release)\/[A-Z]+-[0-9]+-[a-z0-9-]+$"
+
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+# Allow pushes to protected branches (handled by server-side protection)
+if echo "${current_branch}" | grep -qE "${PROTECTED_BRANCHES}"; then
+    exit 0
+fi
+
+if ! echo "${current_branch}" | grep -qE "${BRANCH_PATTERN}"; then
+    echo ""
+    echo "  ERROR: Branch name '${current_branch}' does not follow naming policy."
+    echo ""
+    echo "  Expected format: <type>/TICKET-NNN-short-description"
+    echo ""
+    echo "  Examples:"
+    echo "    feat/PROJ-123-add-oauth-login"
+    echo "    fix/PROJ-456-fix-null-pointer"
+    echo "    chore/PROJ-789-upgrade-dependencies"
+    echo "    hotfix/PROD-001-fix-payment-crash"
+    echo ""
+    echo "  To bypass (emergency only): git push --no-verify"
+    echo ""
+    exit 1
+fi

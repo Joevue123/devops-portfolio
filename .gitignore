@@ -1,0 +1,40 @@
+# Secrets / local config
+config.env
+.env
+*.env
+!*.env.example
+certs/
+*.pem
+*.key
+*.crt
+
+# Terraform state and cache
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+
+# Node
+node_modules/
+dist/
+coverage/
+.nyc_output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Ansible vault password file
+.vault_pass

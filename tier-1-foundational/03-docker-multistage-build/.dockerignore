@@ -1,0 +1,42 @@
+# Build artifacts
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Dependencies
+node_modules/
+
+# VCS
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+__tests__/
+jest.config.*
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Docs
+*.md
+docs/
+
+# CI/CD config (no need in image)
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# OS junk
+.DS_Store
+Thumbs.db

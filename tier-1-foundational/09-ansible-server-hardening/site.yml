@@ -1,0 +1,23 @@
+---
+- name: Apply baseline configuration to all hosts
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - security
+    - users
+    - monitoring
+
+- name: Configure web servers
+  hosts: webservers
+  become: true
+  roles:
+    - nginx
+    - certbot
+
+- name: Configure database servers
+  hosts: dbservers
+  become: true
+  roles:
+    - postgresql

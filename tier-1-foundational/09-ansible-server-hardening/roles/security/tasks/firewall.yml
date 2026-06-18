@@ -1,0 +1,51 @@
+---
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+    update_cache: true
+
+- name: Set UFW default deny incoming
+  ufw:
+    direction: incoming
+    policy: deny
+
+- name: Set UFW default allow outgoing
+  ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: "{{ ssh_port | default('22') }}"
+    proto: tcp
+    comment: SSH access
+
+- name: Allow HTTP
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+  when: "'webservers' in group_names"
+
+- name: Allow HTTPS
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+  when: "'webservers' in group_names"
+
+- name: Allow PostgreSQL from app servers only
+  ufw:
+    rule: allow
+    port: '5432'
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ groups['webservers'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | list }}"
+  when: "'dbservers' in group_names"
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+    logging: 'on'

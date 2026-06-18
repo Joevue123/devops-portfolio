@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Joel Tega — DevOps Portfolio</title>
+  <meta name="description" content="50 production-grade DevOps projects organized by difficulty tier — from Linux fundamentals to platform engineering." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="avatar">JT</div>
+        <div>
+          <h1 class="name">Joel Tega</h1>
+          <p class="title">DevOps / Platform Engineer</p>
+        </div>
+      </div>
+      <nav class="header-links">
+        <a href="https://github.com/joeltega/devops-portfolio" target="_blank" rel="noopener" class="btn btn-outline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="mailto:joeltega@gmail.com" class="btn btn-outline">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Hero ────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">50 Projects · 5 Tiers · Production-Grade</div>
+      <h2 class="hero-title">End-to-End DevOps<br />from First Principles</h2>
+      <p class="hero-sub">Each project solves a real infrastructure problem with working code, architecture diagrams, and the engineering decisions interviewers actually ask about.</p>
+      <div class="tier-progress">
+        <div class="tier-stat" data-tier="1">
+          <span class="tier-count" id="t1-count">10</span>
+          <span class="tier-label">Foundational</span>
+          <div class="tier-bar"><div class="tier-fill" style="width:100%"></div></div>
+        </div>
+        <div class="tier-stat" data-tier="2">
+          <span class="tier-count">0</span>
+          <span class="tier-label">Intermediate</span>
+          <div class="tier-bar"><div class="tier-fill" style="width:0%"></div></div>
+        </div>
+        <div class="tier-stat" data-tier="3">
+          <span class="tier-count">0</span>
+          <span class="tier-label">Advanced</span>
+          <div class="tier-bar"><div class="tier-fill" style="width:0%"></div></div>
+        </div>
+        <div class="tier-stat" data-tier="4">
+          <span class="tier-count">0</span>
+          <span class="tier-label">Expert</span>
+          <div class="tier-bar"><div class="tier-fill" style="width:0%"></div></div>
+        </div>
+        <div class="tier-stat" data-tier="5">
+          <span class="tier-count">0</span>
+          <span class="tier-label">Principal</span>
+          <div class="tier-bar"><div class="tier-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Filters ──────────────────────────────────────────────────── -->
+  <section class="filters-section">
+    <div class="container">
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">All Projects</button>
+        <button class="filter-btn" data-filter="tier-1">Tier 1</button>
+        <button class="filter-btn" data-filter="tier-2">Tier 2</button>
+        <button class="filter-btn" data-filter="tier-3">Tier 3+</button>
+        <button class="filter-btn" data-filter="bash">Bash</button>
+        <button class="filter-btn" data-filter="docker">Docker</button>
+        <button class="filter-btn" data-filter="kubernetes">Kubernetes</button>
+        <button class="filter-btn" data-filter="terraform">Terraform</button>
+        <button class="filter-btn" data-filter="ansible">Ansible</button>
+        <button class="filter-btn" data-filter="ci-cd">CI/CD</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Projects Grid ────────────────────────────────────────────── -->
+  <main class="container projects-container">
+
+    <!-- Tier 1 heading -->
+    <div class="tier-heading" id="tier-1-heading">
+      <span class="tier-badge tier-1">Tier 1</span>
+      <h3>Foundational</h3>
+      <p>Linux, Docker, CI/CD basics, Infrastructure as Code intro</p>
+    </div>
+
+    <div class="projects-grid" id="projects-grid">
+      <!-- Populated by app.js -->
+    </div>
+
+    <!-- Coming soon tiers -->
+    <div class="coming-soon-section" id="coming-soon">
+      <div class="coming-soon-card">
+        <span class="tier-badge tier-2">Tier 2</span>
+        <h4>Intermediate — Coming Soon</h4>
+        <p>Helm charts · ArgoCD GitOps · Prometheus/Grafana · Vault secrets · Istio</p>
+      </div>
+      <div class="coming-soon-card">
+        <span class="tier-badge tier-3">Tier 3</span>
+        <h4>Advanced — Coming Soon</h4>
+        <p>Canary deploys · Chaos engineering · Tekton · OPA policy · eBPF observability</p>
+      </div>
+      <div class="coming-soon-card">
+        <span class="tier-badge tier-4">Tier 4</span>
+        <h4>Expert — Coming Soon</h4>
+        <p>Crossplane · Multi-cluster federation · FinOps dashboards · Custom operators</p>
+      </div>
+      <div class="coming-soon-card">
+        <span class="tier-badge tier-5">Tier 5</span>
+        <h4>Principal — Coming Soon</h4>
+        <p>Internal developer platform · AI/ML infra · Org-scale IaC modules</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <p>Built with working code, not screenshots. Every project has a README, architecture diagram, and production considerations.</p>
+      <p class="footer-links">
+        <a href="https://github.com/joeltega/devops-portfolio" target="_blank" rel="noopener">Source on GitHub</a>
+      </p>
+    </div>
+  </footer>
+
+  <!-- ── Project detail modal ────────────────────────────────────── -->
+  <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

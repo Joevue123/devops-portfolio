@@ -1,0 +1,61 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/certs:ro
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+      - app1
+      - app2
+      - app3
+    networks:
+      - proxy
+    restart: unless-stopped
+
+  app1: &app
+    image: node:20-alpine
+    command: node -e "
+      const h=require('http');
+      h.createServer((req,res)=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({server:'app1',pid:process.pid}));
+      }).listen(3000);
+      console.log('app1 listening');"
+    networks: [proxy]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  app2:
+    <<: *app
+    command: node -e "
+      const h=require('http');
+      h.createServer((req,res)=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({server:'app2',pid:process.pid}));
+      }).listen(3000);
+      console.log('app2 listening');"
+
+  app3:
+    <<: *app
+    command: node -e "
+      const h=require('http');
+      h.createServer((req,res)=>{
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({server:'app3',pid:process.pid}));
+      }).listen(3000);
+      console.log('app3 listening');"
+
+networks:
+  proxy:
+    driver: bridge
+
+volumes:
+  nginx-cache:

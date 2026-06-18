@@ -1,0 +1,30 @@
+---
+- name: Apply kernel hardening parameters (CIS Level 1)
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-hardening.conf
+    reload: true
+  loop:
+    # Disable IP forwarding (unless this is a router)
+    - { key: net.ipv4.ip_forward,                       value: "0" }
+    # Prevent IP spoofing
+    - { key: net.ipv4.conf.all.rp_filter,               value: "1" }
+    - { key: net.ipv4.conf.default.rp_filter,           value: "1" }
+    # Disable ICMP redirects
+    - { key: net.ipv4.conf.all.accept_redirects,        value: "0" }
+    - { key: net.ipv4.conf.default.accept_redirects,    value: "0" }
+    - { key: net.ipv6.conf.all.accept_redirects,        value: "0" }
+    # Disable source routing
+    - { key: net.ipv4.conf.all.accept_source_route,     value: "0" }
+    # Enable SYN flood protection
+    - { key: net.ipv4.tcp_syncookies,                   value: "1" }
+    # Log suspicious packets
+    - { key: net.ipv4.conf.all.log_martians,            value: "1" }
+    # Ignore ICMP broadcast
+    - { key: net.ipv4.icmp_echo_ignore_broadcasts,      value: "1" }
+    # Protect against SUID core dumps
+    - { key: fs.suid_dumpable,                          value: "0" }
+    # ASLR
+    - { key: kernel.randomize_va_space,                 value: "2" }

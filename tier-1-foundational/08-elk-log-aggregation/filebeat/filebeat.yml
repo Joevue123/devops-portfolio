@@ -1,0 +1,50 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/host/nginx/access.log
+    fields:
+      log_type: nginx_access
+    fields_under_root: false
+    multiline.pattern: '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
+    multiline.negate: true
+    multiline.match: after
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/host/app/*.log
+    fields:
+      log_type: app
+    fields_under_root: false
+    json.keys_under_root: false
+    json.add_error_key: true
+
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    fields:
+      log_type: docker
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - drop_fields:
+      fields: ["agent.ephemeral_id", "log.offset"]
+      ignore_missing: true
+
+output.logstash:
+  hosts: ["logstash:5044"]
+  bulk_max_size: 2048
+
+logging.level: warning
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
