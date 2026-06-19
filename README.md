@@ -42,9 +42,20 @@
 | 19 | [Cert-Manager TLS Automation](./tier-2-intermediate/19-cert-manager-tls/) | cert-manager, Let's Encrypt, DNS-01 |
 | 20 | [Fluent Bit K8s Log Pipeline](./tier-2-intermediate/20-fluentbit-k8s-logging/) | Fluent Bit, DaemonSet, Loki |
 
-## Tier 3 — Advanced *(coming soon)*
+## Tier 3 — Advanced
 
-Projects 21–30: Multi-stage canary deployments, chaos engineering with Litmus, Tekton pipelines, OPA policy enforcement.
+| # | Project | Skills |
+|---|---------|--------|
+| 21 | [Automated Canary with Flagger](./tier-3-advanced/21-canary-flagger/) | Flagger, progressive delivery, Prometheus gates |
+| 22 | [Chaos Engineering with Litmus](./tier-3-advanced/22-chaos-engineering/) | LitmusChaos, steady-state hypothesis, Argo Workflow |
+| 23 | [Tekton Cloud-Native CI/CD](./tier-3-advanced/23-tekton-pipeline/) | Tekton, Kaniko, EventListener, webhooks |
+| 24 | [OPA Gatekeeper Policy](./tier-3-advanced/24-opa-gatekeeper/) | OPA, Gatekeeper, Rego, admission control |
+| 25 | [eBPF Observability with Cilium](./tier-3-advanced/25-ebpf-cilium/) | eBPF, Cilium, Hubble, L7 policy, WireGuard |
+| 26 | [Blue/Green Deployment](./tier-3-advanced/26-blue-green-deployment/) | Kubernetes, zero-downtime, auto-rollback |
+| 27 | [Crossplane Infrastructure Composition](./tier-3-advanced/27-crossplane-infra/) | Crossplane, XRD, Composition, self-service |
+| 28 | [Velero Backup & Disaster Recovery](./tier-3-advanced/28-velero-backup/) | Velero, CSI snapshots, S3, DR drills |
+| 29 | [External Secrets Operator](./tier-3-advanced/29-external-secrets/) | ESO, AWS Secrets Manager, Vault, auto-rotation |
+| 30 | [Karpenter Node Autoscaling](./tier-3-advanced/30-karpenter-autoscaling/) | Karpenter, spot, consolidation, NodePool |
 
 ## Tier 4 — Expert *(coming soon)*
 

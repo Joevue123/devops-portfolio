@@ -215,6 +215,212 @@ const PROJECTS = [
     path: 'tier-1-foundational/10-kubernetes-app-deployment',
   },
 
+  // ── Tier 3: Advanced ─────────────────────────────────────────────
+  {
+    id: '21',
+    title: 'Automated Canary with Flagger',
+    tier: 'tier-3',
+    icon: '🐤',
+    summary: 'Flagger automates progressive delivery: shifts 10% traffic per minute, gates on Prometheus error rate + p99 latency, rolls back instantly on regression — zero human approval.',
+    problem: 'Manual canary deployments require humans watching dashboards at deploy time.',
+    skills: ['flagger', 'kubernetes', 'prometheus', 'canary'],
+    files: [
+      'k8s/canary.yaml          — stepWeight, threshold, metric gates, webhooks',
+      'k8s/metric-template.yaml — PromQL queries for success rate + latency',
+    ],
+    decisions: [
+      'Automated metric gates — no human approval for standard deploys',
+      'Load test webhook — canary gets real traffic during analysis window',
+      'stepWeight: 10 with 1m interval — 10-minute full canary, fast enough to ship',
+      'maxWeight: 50 — never send majority traffic to untested version',
+    ],
+    path: 'tier-3-advanced/21-canary-flagger',
+  },
+  {
+    id: '22',
+    title: 'Chaos Engineering with Litmus',
+    tier: 'tier-3',
+    icon: '💥',
+    summary: 'Scheduled chaos experiments: pod-delete (50% of pods, every 30s), network-latency injection (200ms), node-drain. Steady-state hypothesis verified via HTTP + Prometheus probes.',
+    problem: "You don't know if your system is resilient until it breaks in production.",
+    skills: ['litmus', 'chaos-engineering', 'kubernetes', 'resilience'],
+    files: [
+      'experiments/pod-delete.yaml      — delete pods with HTTP liveness probe',
+      'experiments/network-latency.yaml — 200ms injection + PromQL SLO probe',
+      'workflows/game-day.yaml          — Argo Workflow for full game-day sequence',
+    ],
+    decisions: [
+      'Steady-state hypothesis before chaos — define normal before breaking it',
+      'podsAffectedPerc: 50 — blast radius control, never kill everything',
+      'Continuous probes during experiment — catch degradation in real time',
+      'Start in staging — validate experiments before targeting production',
+    ],
+    path: 'tier-3-advanced/22-chaos-engineering',
+  },
+  {
+    id: '23',
+    title: 'Tekton Cloud-Native CI/CD',
+    tier: 'tier-3',
+    icon: '🏭',
+    summary: 'Kubernetes-native pipeline: GitHub webhook → EventListener → PipelineRun. Tasks: git-clone, npm test, kaniko build, Trivy scan, kubectl deploy. Each step is an isolated Pod.',
+    problem: 'Jenkins and GitHub Actions run outside the cluster with no Kubernetes-native scaling.',
+    skills: ['tekton', 'kubernetes', 'ci-cd', 'kaniko'],
+    files: [
+      'k8s/pipeline.yaml                — 6-task pipeline with finally block',
+      'k8s/tasks/npm-lint-test.yaml     — lint + test as a reusable Task',
+      'k8s/trigger/event-listener.yaml  — GitHub webhook → PipelineRun',
+    ],
+    decisions: [
+      'Kaniko over Docker-in-Docker — builds images without privileged containers',
+      'PVC workspace — Tasks share source code, no S3 artifact store needed',
+      'finally tasks — Slack notify always runs, even on pipeline failure',
+      'CEL interceptor — extracts 7-char git SHA as image tag at webhook time',
+    ],
+    path: 'tier-3-advanced/23-tekton-pipeline',
+  },
+  {
+    id: '24',
+    title: 'OPA Gatekeeper Policy Enforcement',
+    tier: 'tier-3',
+    icon: '⚖️',
+    summary: 'Admission controller enforcing: resource limits required, no privileged containers, no latest tag, images from allowed registries only. Rego policies tested in CI before deployment.',
+    problem: 'Kubernetes allows containers as root without resource limits by default.',
+    skills: ['opa', 'gatekeeper', 'rego', 'security', 'kubernetes'],
+    files: [
+      'templates/require-resource-limits.yaml  — Rego: deny missing CPU/mem limits',
+      'templates/allowed-registries.yaml       — Rego: parametrized registry allowlist',
+      'constraints/production-constraints.yaml — enforcement: deny on production ns',
+    ],
+    decisions: [
+      'Start in dryrun mode — audit violations without breaking existing workloads',
+      'Exempt kube-system — system components must never be policy-blocked',
+      'Rego unit tests in CI — opa test catches policy regressions before apply',
+      'Deny messages explain exactly what to change, not just that it failed',
+    ],
+    path: 'tier-3-advanced/24-opa-gatekeeper',
+  },
+  {
+    id: '25',
+    title: 'eBPF Observability with Cilium',
+    tier: 'tier-3',
+    icon: '🔬',
+    summary: 'Cilium replaces kube-proxy entirely. Hubble provides L7 HTTP flow visibility (method, path, status) per pod pair with zero sidecars. L7-aware NetworkPolicy: allow GET /api/* only.',
+    problem: 'Traditional observability adds sidecar overhead; iptables breaks down at scale.',
+    skills: ['ebpf', 'cilium', 'kubernetes', 'networking', 'security'],
+    files: [
+      'k8s/network-policy-l7.yaml  — allow GET /api/* from frontend only',
+      'k8s/cilium-config.yaml      — kube-proxy replacement, WireGuard, Hubble',
+    ],
+    decisions: [
+      'kubeProxyReplacement: true — removes iptables, eBPF is faster at scale',
+      'Identity-based policy (labels not IPs) — survives pod restarts and IP churn',
+      'L7 HTTP policy without sidecars — enforce REST method rules in kernel',
+      'WireGuard encryption — node-to-node traffic encrypted without certificates',
+    ],
+    path: 'tier-3-advanced/25-ebpf-cilium',
+  },
+  {
+    id: '26',
+    title: 'Blue/Green Deployment',
+    tier: 'tier-3',
+    icon: '🔵🟢',
+    summary: 'Both versions live simultaneously. Switch is a single Service selector patch (< 1 second). Script deploys to inactive slot, smoke tests it, switches, monitors error rate, auto-rolls back.',
+    problem: 'Rolling updates take minutes and partial rollback under load is complex.',
+    skills: ['kubernetes', 'deployment-strategy', 'bash', 'zero-downtime'],
+    files: [
+      'k8s/deployments.yaml   — api-blue and api-green Deployments + shared Service',
+      'scripts/switch.sh      — deploy → smoke test → switch → monitor → auto-rollback',
+    ],
+    decisions: [
+      'Both slots at full replicas — instant switch, no scale-up lag under load',
+      'Smoke test pod exec before switch — validate before any user traffic hits new version',
+      'Auto-rollback on error rate > 1% — no manual intervention needed',
+      'Feature flags for DB migrations — backward-compatible schema before switch',
+    ],
+    path: 'tier-3-advanced/26-blue-green-deployment',
+  },
+  {
+    id: '27',
+    title: 'Crossplane Infrastructure Composition',
+    tier: 'tier-3',
+    icon: '🔧',
+    summary: 'Platform team defines XAppDatabase CRD. Developer kubectl applies size:small + team:payments. Crossplane provisions RDS, subnet group, security group and writes connection details to a Secret.',
+    problem: 'Developers needing databases should not need Terraform or AWS console access.',
+    skills: ['crossplane', 'platform-engineering', 'aws', 'kubernetes'],
+    files: [
+      'xrds/app-database-xrd.yaml             — CompositeResourceDefinition (API schema)',
+      'compositions/app-database-composition.yaml — maps XRD fields to RDS resources',
+      'claims/app-database-claim.yaml          — developer self-service example',
+    ],
+    decisions: [
+      'XRD abstracts cloud details — dev says size:small, Crossplane picks db.t3.micro',
+      'Composition patches with transforms — size enum → instance class mapping',
+      'Connection Secret auto-written — app consumes consistent Secret shape',
+      'deletionProtection: true in base — Composition prevents accidental DB deletion',
+    ],
+    path: 'tier-3-advanced/27-crossplane-infra',
+  },
+  {
+    id: '28',
+    title: 'Velero Backup & Disaster Recovery',
+    tier: 'tier-3',
+    icon: '💾',
+    summary: 'Daily full backup + hourly namespace backup to S3. Pre-backup PostgreSQL CHECKPOINT hook. Monthly DR drill script restores to isolated namespace, hits health endpoint, verifies RTO.',
+    problem: 'An untested backup is not a backup — most teams discover gaps during an actual incident.',
+    skills: ['velero', 'backup', 'disaster-recovery', 'aws'],
+    files: [
+      'schedules/backup-schedules.yaml  — daily full + hourly production schedules',
+      'scripts/dr-drill.sh              — restore to dr-test namespace and verify',
+    ],
+    decisions: [
+      'CSI snapshots over fs-backup — native EBS snapshots are faster and cheaper',
+      'Pre-backup CHECKPOINT hook — prevents PostgreSQL data corruption in snapshots',
+      'Cross-region S3 replication — region outage does not take down backups',
+      'Restore to separate namespace — test in production cluster without risk',
+    ],
+    path: 'tier-3-advanced/28-velero-backup',
+  },
+  {
+    id: '29',
+    title: 'External Secrets Operator',
+    tier: 'tier-3',
+    icon: '🔑',
+    summary: 'ClusterSecretStore connects to AWS Secrets Manager and Vault. ExternalSecrets sync on 1h schedule, auto-rotate when source changes. Stakater Reloader restarts pods on Secret update.',
+    problem: 'Vault sidecars work per-pod but cluster-wide secrets need a different pattern.',
+    skills: ['external-secrets', 'vault', 'aws', 'kubernetes', 'security'],
+    files: [
+      'k8s/secret-store.yaml      — AWS SM + Vault ClusterSecretStores with IRSA',
+      'k8s/external-secrets.yaml  — sync API creds + dynamic Vault DB creds',
+    ],
+    decisions: [
+      'ClusterSecretStore — one store definition used across all namespaces',
+      'refreshInterval: 55m for Vault — shorter than 1h TTL, prevents expiry gap',
+      'deletionPolicy: Retain — ESO deletion does not take down production secrets',
+      'Combine with Reloader — pods restart automatically when Secret rotates',
+    ],
+    path: 'tier-3-advanced/29-external-secrets',
+  },
+  {
+    id: '30',
+    title: 'Karpenter Node Autoscaling',
+    tier: 'tier-3',
+    icon: '🚀',
+    summary: 'Provisions the exact EC2 instance type needed in 30-60s. Spot-first with on-demand fallback. Dedicated database NodePool with NoSchedule taint. Consolidation cuts idle node costs 25-40%.',
+    problem: 'Cluster Autoscaler is slow (2-3 min), over-provisions, and can\'t pick the right instance type.',
+    skills: ['karpenter', 'aws', 'kubernetes', 'autoscaling', 'cost'],
+    files: [
+      'k8s/node-pool.yaml       — general (spot+OD) and database (OD-only) NodePools',
+      'k8s/ec2-node-class.yaml  — AMI, subnet, security group, EBS config',
+    ],
+    decisions: [
+      'Spot with on-demand fallback — EC2 Fleet picks cheapest available capacity',
+      'Multiple instance families (c,m,r) — flexibility to find available spot',
+      'consolidationPolicy: WhenUnderutilized — aggressively removes idle nodes',
+      'budgets: 10% — Karpenter disrupts at most 10% of nodes at once',
+    ],
+    path: 'tier-3-advanced/30-karpenter-autoscaling',
+  },
+
   // ── Tier 2: Intermediate ──────────────────────────────────────────
   {
     id: '11',
@@ -487,10 +693,14 @@ function renderProjects(filter) {
 
   // Show/hide section headings and coming-soon based on filter
   const comingSoon = document.getElementById('coming-soon');
+  const tier1Heading = document.getElementById('tier-1-heading');
   const tier2Heading = document.getElementById('tier-2-heading');
+  const tier3Heading = document.getElementById('tier-3-heading');
   const showAll = filter === 'all';
   comingSoon.style.display = showAll ? '' : 'none';
+  tier1Heading.style.display = showAll ? '' : 'none';
   tier2Heading.style.display = showAll ? '' : 'none';
+  tier3Heading.style.display = showAll ? '' : 'none';
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -565,12 +775,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-
-    const tierHeading = document.getElementById('tier-1-heading');
-    const filter = btn.dataset.filter;
-    tierHeading.style.display = filter === 'all' ? '' : 'none';
-
-    renderProjects(filter);
+    renderProjects(btn.dataset.filter);
   });
 });
 

@@ -1,0 +1,59 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: app-database-aws
+spec:
+  compositeTypeRef:
+    apiVersion: platform.example.com/v1alpha1
+    kind: XAppDatabase
+  resources:
+    - name: rds-instance
+      base:
+        apiVersion: rds.aws.upbound.io/v1beta1
+        kind: Instance
+        spec:
+          forProvider:
+            region: us-east-1
+            engine: postgres
+            engineVersion: "16.3"
+            autoMinorVersionUpgrade: true
+            storageEncrypted: true
+            multiAz: false
+            publiclyAccessible: false
+            deletionProtection: true
+            backupRetentionPeriod: 7
+            tags:
+              ManagedBy: crossplane
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.size
+          toFieldPath: spec.forProvider.instanceClass
+          transforms:
+            - type: map
+              map:
+                small:  db.t3.micro
+                medium: db.t3.small
+                large:  db.t3.medium
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.team
+          toFieldPath: spec.forProvider.tags.Team
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.endpoint
+          toFieldPath: status.endpoint
+      connectionDetails:
+        - name: host
+          fromFieldPath: status.atProvider.endpoint
+        - name: port
+          fromConnectionSecretKey: port
+
+    - name: db-subnet-group
+      base:
+        apiVersion: rds.aws.upbound.io/v1beta1
+        kind: SubnetGroup
+        spec:
+          forProvider:
+            region: us-east-1
+            description: Managed by Crossplane
+            subnetIdRefs:
+              - name: data-subnet-a
+              - name: data-subnet-b

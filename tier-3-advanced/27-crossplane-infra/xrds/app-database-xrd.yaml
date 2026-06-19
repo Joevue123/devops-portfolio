@@ -1,0 +1,42 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xappdatabases.platform.example.com
+spec:
+  group: platform.example.com
+  names:
+    kind: XAppDatabase
+    plural: xappdatabases
+  claimNames:
+    kind: AppDatabase
+    plural: appdatabases
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                size:
+                  type: string
+                  enum: [small, medium, large]
+                  description: "small=t3.micro, medium=t3.small, large=t3.medium"
+                engine:
+                  type: string
+                  enum: [postgres, mysql]
+                  default: postgres
+                team:
+                  type: string
+                  description: Team that owns this database (for tagging/billing)
+              required: [size, team]
+            status:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+                port:
+                  type: integer

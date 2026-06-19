@@ -1,0 +1,42 @@
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: api-network-latency
+  namespace: production
+spec:
+  engineState: active
+  appinfo:
+    appns: production
+    applabel: app=api
+    appkind: deployment
+  chaosServiceAccount: litmus-admin
+  experiments:
+    - name: pod-network-latency
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"
+            - name: NETWORK_LATENCY
+              value: "200"        # inject 200ms latency
+            - name: JITTER
+              value: "50"         # ±50ms jitter
+            - name: PODS_AFFECTED_PERC
+              value: "50"
+            - name: DESTINATION_IPS
+              value: ""           # empty = all destinations
+        probe:
+          - name: check-latency-slo
+            type: promProbe
+            promProbe/inputs:
+              endpoint: http://prometheus.monitoring:9090
+              query: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="api"}[1m])) * 1000
+              comparator:
+                type: float
+                criteria: "<="
+                value: "600"    # p99 must stay under 600ms even with 200ms injected
+            mode: Continuous
+            runProperties:
+              probeTimeout: 10
+              interval: 15
+              retry: 2

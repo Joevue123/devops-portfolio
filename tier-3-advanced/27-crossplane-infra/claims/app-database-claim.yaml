@@ -1,0 +1,14 @@
+# Developer self-service: provision a PostgreSQL database
+# No AWS console access, no Terraform knowledge required
+apiVersion: platform.example.com/v1alpha1
+kind: AppDatabase
+metadata:
+  name: payments-db
+  namespace: payments-team
+spec:
+  size: small
+  engine: postgres
+  team: payments
+  # Connection details will be written to this Secret automatically
+  writeConnectionSecretToRef:
+    name: payments-db-conn

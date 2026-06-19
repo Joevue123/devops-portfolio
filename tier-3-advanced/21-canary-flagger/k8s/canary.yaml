@@ -1,0 +1,50 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: api
+  namespace: production
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  progressDeadlineSeconds: 600
+  service:
+    port: 80
+    targetPort: 3000
+    gateways:
+      - production/api-gateway
+    hosts:
+      - api.example.com
+  analysis:
+    interval: 1m
+    threshold: 5          # fail after 5 consecutive metric failures
+    maxWeight: 50         # never send more than 50% to canary
+    stepWeight: 10        # increase by 10% per interval
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: 99         # 99% success rate required
+        interval: 1m
+      - name: request-duration
+        thresholdRange:
+          max: 500        # p99 must be under 500ms
+        interval: 1m
+    webhooks:
+      - name: load-test
+        url: http://flagger-loadtester.flagger-system/
+        timeout: 5s
+        metadata:
+          cmd: "hey -z 1m -q 10 -c 2 http://api-canary.production/"
+      - name: smoke-test
+        type: pre-rollout
+        url: http://flagger-loadtester.flagger-system/
+        timeout: 15s
+        metadata:
+          cmd: "curl -s http://api-canary.production/health | grep ok"
+    alerts:
+      - name: slack
+        severity: warn
+        providerRef:
+          name: slack-portfolio
+          namespace: flagger-system

@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: game-day
+  namespace: litmus
+spec:
+  entrypoint: game-day
+  serviceAccountName: argo-chaos
+  templates:
+    - name: game-day
+      steps:
+        - - name: baseline-check
+            template: http-check
+        - - name: pod-delete
+            template: run-chaos
+            arguments:
+              parameters:
+                - name: experiment
+                  value: pod-delete
+        - - name: verify-recovery
+            template: http-check
+        - - name: network-latency
+            template: run-chaos
+            arguments:
+              parameters:
+                - name: experiment
+                  value: network-latency
+        - - name: final-check
+            template: http-check
+
+    - name: http-check
+      script:
+        image: curlimages/curl:8.7.1
+        command: [sh]
+        source: |
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://api-service.production/health)
+            echo "Check $i: HTTP $STATUS"
+            [ "$STATUS" != "200" ] && exit 1
+            sleep 5
+          done
+
+    - name: run-chaos
+      inputs:
+        parameters:
+          - name: experiment
+      resource:
+        action: apply
+        manifest: |
+          apiVersion: litmuschaos.io/v1alpha1
+          kind: ChaosEngine
+          metadata:
+            name: "{{inputs.parameters.experiment}}-gameday"
+            namespace: production
+          spec:
+            engineState: active
+            appinfo:
+              appns: production
+              applabel: app=api
+              appkind: deployment
+            experiments:
+              - name: "{{inputs.parameters.experiment}}"

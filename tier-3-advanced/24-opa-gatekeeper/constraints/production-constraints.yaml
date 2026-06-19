@@ -1,0 +1,33 @@
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequireResourceLimits
+metadata:
+  name: require-resource-limits
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet]
+    namespaces: [production, staging]
+    excludedNamespaces: [kube-system, gatekeeper-system, cert-manager]
+
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sAllowedRegistries
+metadata:
+  name: allowed-registries
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [apps]
+        kinds: [Deployment, StatefulSet, DaemonSet]
+    namespaces: [production]
+  parameters:
+    allowedRegistries:
+      - "123456789.dkr.ecr.us-east-1.amazonaws.com/"
+      - "harbor.example.com/"
+      - "gcr.io/distroless/"
+      - "prom/"
+      - "grafana/"

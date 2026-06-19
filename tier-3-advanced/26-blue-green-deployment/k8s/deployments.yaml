@@ -1,0 +1,98 @@
+---
+# Blue deployment (currently active)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-blue
+  namespace: production
+  labels:
+    app: api
+    slot: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+      slot: blue
+  template:
+    metadata:
+      labels:
+        app: api
+        slot: blue
+        version: v1.2.0
+    spec:
+      containers:
+        - name: api
+          image: myapp:v1.2.0
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+# Green deployment (standby — deploy new version here)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-green
+  namespace: production
+  labels:
+    app: api
+    slot: green
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+      slot: green
+  template:
+    metadata:
+      labels:
+        app: api
+        slot: green
+        version: v1.3.0
+    spec:
+      containers:
+        - name: api
+          image: myapp:v1.3.0
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+# Service — selector.slot determines which deployment gets traffic
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: production
+spec:
+  selector:
+    app: api
+    slot: blue    # ← change to green to switch traffic
+  ports:
+    - port: 80
+      targetPort: 3000

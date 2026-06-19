@@ -1,0 +1,28 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: npm-lint-test
+  namespace: tekton-pipelines
+spec:
+  workspaces:
+    - name: source
+  stepTemplate:
+    workingDir: $(workspaces.source.path)
+    image: node:20-alpine
+  steps:
+    - name: install
+      script: npm ci
+
+    - name: lint
+      script: npm run lint
+
+    - name: test
+      script: |
+        npm test -- --coverage --ci --reporters=default --reporters=jest-junit
+      env:
+        - name: JEST_JUNIT_OUTPUT_DIR
+          value: $(workspaces.source.path)/reports
+
+  results:
+    - name: test-count
+      description: Number of tests that passed

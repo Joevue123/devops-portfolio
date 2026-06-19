@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-config
+  namespace: kube-system
+data:
+  # Replace kube-proxy with eBPF
+  kube-proxy-replacement: "true"
+
+  # Enable Hubble observability
+  enable-hubble: "true"
+  hubble-listen-address: ":4244"
+  hubble-flow-buffer-size: "4096"
+
+  # Enable L7 policy enforcement
+  enable-l7-proxy: "true"
+
+  # Enable encryption (WireGuard)
+  enable-wireguard: "true"
+
+  # BPF masquerade (faster than iptables MASQUERADE)
+  enable-bpf-masquerade: "true"
+
+  # Enable bandwidth manager (TCP BBR)
+  enable-bandwidth-manager: "true"

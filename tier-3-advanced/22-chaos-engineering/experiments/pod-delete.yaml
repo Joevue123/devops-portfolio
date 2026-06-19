@@ -1,0 +1,40 @@
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: api-pod-delete
+  namespace: production
+spec:
+  engineState: active
+  appinfo:
+    appns: production
+    applabel: app=api
+    appkind: deployment
+  chaosServiceAccount: litmus-admin
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"        # run for 2 minutes
+            - name: CHAOS_INTERVAL
+              value: "30"         # delete a pod every 30s
+            - name: PODS_AFFECTED_PERC
+              value: "50"         # affect max 50% of pods
+            - name: FORCE
+              value: "false"      # graceful termination
+        probe:
+          - name: check-api-health
+            type: httpProbe
+            httpProbe/inputs:
+              url: http://api-service.production/health
+              insecureSkipVerify: false
+              method:
+                get:
+                  criteria: ==
+                  responseCode: "200"
+            mode: Continuous
+            runProperties:
+              probeTimeout: 5
+              interval: 10
+              retry: 3
