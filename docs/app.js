@@ -1054,16 +1054,48 @@ const PROJECTS = [
 
 // ── Rendering ────────────────────────────────────────────────────────────────
 
-function renderProjects(filter) {
+let currentQuery = '';
+
+function renderProjects(filter, query) {
+  if (query !== undefined) currentQuery = query;
+  const q = currentQuery.trim().toLowerCase();
+
   const grid = document.getElementById('projects-grid');
   grid.innerHTML = '';
 
-  const filtered = filter === 'all'
+  let filtered = filter === 'all'
     ? PROJECTS
     : PROJECTS.filter(p =>
         p.tier === filter ||
         p.skills.some(s => s.toLowerCase().includes(filter))
       );
+
+  if (q) {
+    filtered = filtered.filter(p =>
+      p.title.toLowerCase().includes(q) ||
+      p.summary.toLowerCase().includes(q) ||
+      p.problem.toLowerCase().includes(q) ||
+      p.skills.some(s => s.toLowerCase().includes(q))
+    );
+  }
+
+  // Search results bar
+  const resultsBar  = document.getElementById('search-results-bar');
+  const resultsText = document.getElementById('search-results-text');
+  if (q) {
+    resultsBar.hidden = false;
+    resultsText.textContent = `${filtered.length} project${filtered.length !== 1 ? 's' : ''} matching "${currentQuery}"`;
+  } else {
+    resultsBar.hidden = true;
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="no-results">
+        No projects matched <strong>"${currentQuery}"</strong>
+        <p>Try a tool name like "vault", a skill like "python", or clear the search to browse all 50 projects.</p>
+      </div>`;
+  }
 
   filtered.forEach(project => {
     const card = document.createElement('article');
@@ -1103,18 +1135,13 @@ function renderProjects(filter) {
     grid.appendChild(card);
   });
 
-  // Show/hide section headings and coming-soon based on filter
-  const tier1Heading = document.getElementById('tier-1-heading');
-  const tier2Heading = document.getElementById('tier-2-heading');
-  const tier3Heading = document.getElementById('tier-3-heading');
-  const tier4Heading = document.getElementById('tier-4-heading');
-  const tier5Heading = document.getElementById('tier-5-heading');
-  const showAll = filter === 'all';
-  tier1Heading.style.display = showAll ? '' : 'none';
-  tier2Heading.style.display = showAll ? '' : 'none';
-  tier3Heading.style.display = showAll ? '' : 'none';
-  tier4Heading.style.display = showAll ? '' : 'none';
-  tier5Heading.style.display = showAll ? '' : 'none';
+  // Tier headings only visible when showing all projects with no search query
+  const showHeadings = filter === 'all' && !q;
+  ['tier-1-heading','tier-2-heading','tier-3-heading','tier-4-heading','tier-5-heading']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = showHeadings ? '' : 'none';
+    });
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -1185,13 +1212,39 @@ function closeModal() {
 
 // ── Filters ──────────────────────────────────────────────────────────────────
 
+let currentFilter = 'all';
+
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    renderProjects(btn.dataset.filter);
+    currentFilter = btn.dataset.filter;
+    renderProjects(currentFilter, currentQuery);
   });
 });
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+const searchInput = document.getElementById('project-search');
+const searchClear = document.getElementById('search-clear');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value;
+  searchClear.hidden = q.length === 0;
+  renderProjects(currentFilter, q);
+});
+
+function clearSearch() {
+  searchInput.value = '';
+  searchClear.hidden = true;
+  renderProjects(currentFilter, '');
+  searchInput.focus();
+}
+
+searchClear.addEventListener('click', clearSearch);
+document.getElementById('search-results-clear').addEventListener('click', clearSearch);
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
 
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', e => {
