@@ -1,0 +1,48 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: auto-instrumentation
+  namespace: production
+spec:
+  exporter:
+    endpoint: http://otel-collector-daemonset:4317
+
+  propagators:
+    - tracecontext    # W3C TraceContext (traceparent header)
+    - baggage         # W3C Baggage (pass key/value across service boundaries)
+    - b3              # Zipkin B3 (for services that haven't migrated yet)
+
+  sampler:
+    type: parentbased_traceidratio
+    argument: "0.1"    # 10% at app level; tail sampler at collector decides final rate
+
+  nodejs:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:latest
+    env:
+      - name: OTEL_SERVICE_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.labels['app.kubernetes.io/name']
+      - name: OTEL_NODE_RESOURCE_DETECTORS
+        value: env,host,os,aws,container,alibabacloud
+
+  python:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:latest
+    env:
+      - name: OTEL_METRICS_EXPORTER
+        value: otlp
+      - name: OTEL_LOGS_EXPORTER
+        value: otlp
+
+  java:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
+    env:
+      - name: OTEL_INSTRUMENTATION_JDBC_ENABLED
+        value: "true"
+
+  go:
+    # Go requires eBPF-based instrumentation (requires privileged)
+    image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:latest
+    env:
+      - name: OTEL_GO_AUTO_TARGET_EXE
+        value: /app/server

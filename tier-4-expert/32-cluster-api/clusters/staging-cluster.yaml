@@ -1,0 +1,137 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: staging
+  namespace: capi-clusters
+  labels:
+    environment: staging
+    managed-by: capi
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks: ["10.192.0.0/12"]
+    services:
+      cidrBlocks: ["10.96.0.0/12"]
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+    kind: KubeadmControlPlane
+    name: staging-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: AWSCluster
+    name: staging
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSCluster
+metadata:
+  name: staging
+  namespace: capi-clusters
+spec:
+  region: us-east-1
+  sshKeyName: capi-default
+  network:
+    vpc:
+      cidrBlock: "10.0.0.0/16"
+      availabilityZoneSelection: Ordered
+      availabilityZoneUsageLimit: 3
+    subnets:
+      - availabilityZone: us-east-1a
+        cidrBlock: "10.0.0.0/24"
+        isPublic: true
+      - availabilityZone: us-east-1a
+        cidrBlock: "10.0.10.0/24"
+        isPublic: false
+      - availabilityZone: us-east-1b
+        cidrBlock: "10.0.1.0/24"
+        isPublic: true
+      - availabilityZone: us-east-1b
+        cidrBlock: "10.0.11.0/24"
+        isPublic: false
+      - availabilityZone: us-east-1c
+        cidrBlock: "10.0.2.0/24"
+        isPublic: true
+      - availabilityZone: us-east-1c
+        cidrBlock: "10.0.12.0/24"
+        isPublic: false
+  controlPlaneLoadBalancer:
+    loadBalancerType: nlb
+    scheme: internet-facing
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: KubeadmControlPlane
+metadata:
+  name: staging-control-plane
+  namespace: capi-clusters
+spec:
+  replicas: 3
+  version: v1.30.0
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: AWSMachineTemplate
+      name: staging-control-plane
+  kubeadmConfigSpec:
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          audit-log-path: /var/log/kubernetes/audit.log
+          audit-log-maxage: "30"
+          audit-log-maxbackup: "10"
+          audit-log-maxsize: "100"
+          enable-admission-plugins: NodeRestriction,ResourceQuota,LimitRanger
+      controllerManager:
+        extraArgs:
+          bind-address: "0.0.0.0"
+      scheduler:
+        extraArgs:
+          bind-address: "0.0.0.0"
+  rolloutStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1    # add 1 new control plane node before removing old
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: staging-control-plane
+  namespace: capi-clusters
+spec:
+  template:
+    spec:
+      instanceType: m5.xlarge
+      iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
+      rootVolume:
+        size: 50
+        type: gp3
+        encrypted: true
+      ami:
+        lookupType: AmazonLinux2
+---
+# Automatically replace unhealthy nodes after 5 minutes
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: staging-control-plane-health
+  namespace: capi-clusters
+spec:
+  clusterName: staging
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/control-plane: ""
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 300s
+    - type: Ready
+      status: "False"
+      timeout: 300s
+  maxUnhealthy: "33%"    # never remediate more than 1/3 of control plane at once

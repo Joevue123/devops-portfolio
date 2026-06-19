@@ -57,9 +57,20 @@
 | 29 | [External Secrets Operator](./tier-3-advanced/29-external-secrets/) | ESO, AWS Secrets Manager, Vault, auto-rotation |
 | 30 | [Karpenter Node Autoscaling](./tier-3-advanced/30-karpenter-autoscaling/) | Karpenter, spot, consolidation, NodePool |
 
-## Tier 4 — Expert *(coming soon)*
+## Tier 4 — Expert
 
-Projects 31–40: Crossplane platform engineering, multi-cluster federation, FinOps dashboards, custom K8s operators.
+| # | Project | Skills |
+|---|---------|--------|
+| 31 | [Custom Kubernetes Operator](./tier-4-expert/31-k8s-operator/) | Go, controller-runtime, CRD, finalizers |
+| 32 | [Cluster API Lifecycle](./tier-4-expert/32-cluster-api/) | CAPI, CAPA, MachineHealthCheck, ClusterClass |
+| 33 | [FinOps with Kubecost](./tier-4-expert/33-finops-kubecost/) | Kubecost, cost allocation, rightsizing |
+| 34 | [OpenTelemetry Observability](./tier-4-expert/34-opentelemetry/) | OTel Collector, traces, metrics, logs, auto-instrumentation |
+| 35 | [Backstage IDP](./tier-4-expert/35-backstage-idp/) | Backstage, software catalog, scaffolder templates |
+| 36 | [Flux v2 GitOps](./tier-4-expert/36-flux-gitops/) | Flux v2, HelmRelease, image automation |
+| 37 | [Falco Runtime Security](./tier-4-expert/37-falco-security/) | Falco, eBPF, custom rules, MITRE ATT&CK |
+| 38 | [SLO/Error Budget Tracking](./tier-4-expert/38-slo-error-budget/) | Sloth, SLO, burn rate alerts, error budget policy |
+| 39 | [RBAC Audit & Least-Privilege](./tier-4-expert/39-rbac-audit/) | RBAC, kube-bench, CIS benchmark, audit2rbac |
+| 40 | [Multi-Region Active-Active](./tier-4-expert/40-multi-region/) | AWS, Route53, RDS Global, multi-region Terraform |
 
 ## Tier 5 — Principal *(coming soon)*
 

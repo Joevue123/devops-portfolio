@@ -1,0 +1,113 @@
+# Custom Falco rules — complements default ruleset
+# Priority levels: EMERGENCY, ALERT, CRITICAL, ERROR, WARNING, NOTICE, INFO, DEBUG
+
+- list: allowed_shell_binaries
+  items: [dash, sh, bash, zsh]
+
+- list: known_admin_containers
+  items: [kubectl-debug, emergency-shell]
+
+- list: sensitive_files
+  items: [/etc/shadow, /etc/passwd, /etc/sudoers, /root/.ssh/authorized_keys, /proc/*/environ]
+
+- list: crypto_miner_binaries
+  items: [xmrig, minerd, cpuminer, cgminer, bfgminer, ethminer, nbminer]
+
+# ── Rules ─────────────────────────────────────────────────────────────────────
+
+- rule: Shell Spawned in Container
+  desc: A shell was spawned inside a container — possible interactive intrusion
+  condition: >
+    spawned_process and
+    container and
+    shell_procs and
+    not container.name in (known_admin_containers) and
+    not proc.pname in (runc, containerd-shim, docker)
+  output: >
+    Shell spawned in container (user=%user.name user_loginuid=%user.loginuid
+    container=%container.name image=%container.image.repository:%container.image.tag
+    shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline)
+  priority: CRITICAL
+  tags: [container, shell, mitre_execution]
+
+- rule: Write to Sensitive File
+  desc: An attempt to write to /etc/ or other sensitive paths
+  condition: >
+    open_write and
+    container and
+    (fd.name startswith /etc/ or
+     fd.name startswith /root/ or
+     fd.name in (sensitive_files)) and
+    not proc.name in (apt, yum, rpm, dpkg, sed, ansible)
+  output: >
+    Write to sensitive file (user=%user.name file=%fd.name
+    container=%container.name image=%container.image.repository:%container.image.tag
+    command=%proc.cmdline)
+  priority: CRITICAL
+  tags: [filesystem, mitre_persistence]
+
+- rule: Read Sensitive File
+  desc: Sensitive file read — potential credential theft
+  condition: >
+    open_read and
+    container and
+    fd.name in (sensitive_files) and
+    not proc.name in (sshd, passwd, sudo, login, systemd)
+  output: >
+    Sensitive file read (user=%user.name file=%fd.name
+    container=%container.name command=%proc.cmdline)
+  priority: HIGH
+  tags: [filesystem, credentials, mitre_credential_access]
+
+- rule: Crypto Miner Detected
+  desc: Known cryptomining binary executed
+  condition: >
+    spawned_process and
+    proc.name in (crypto_miner_binaries)
+  output: >
+    Crypto miner detected! (user=%user.name container=%container.name
+    image=%container.image.repository:%container.image.tag
+    command=%proc.cmdline connection=%fd.name)
+  priority: CRITICAL
+  tags: [cryptomining, mitre_impact]
+
+- rule: Unexpected Outbound Connection
+  desc: Process making outbound connection on unexpected port
+  condition: >
+    outbound and
+    container and
+    not fd.rport in (80, 443, 8080, 8443, 5432, 6379, 9200, 3306) and
+    not proc.name in (curl, wget, kubectl, aws) and
+    fd.rip != "127.0.0.1"
+  output: >
+    Unexpected outbound connection (user=%user.name container=%container.name
+    command=%proc.cmdline destination=%fd.rip:%fd.rport proto=%fd.l4proto)
+  priority: HIGH
+  tags: [network, mitre_command_and_control]
+
+- rule: Kubernetes Secret Accessed by Non-System Process
+  desc: Application process reading K8s service account secret file directly
+  condition: >
+    open_read and
+    container and
+    fd.name startswith /var/run/secrets/kubernetes.io/serviceaccount/ and
+    not proc.name in (node, python, java, ruby, dotnet, go)
+  output: >
+    K8s secret file accessed by unexpected process
+    (user=%user.name proc=%proc.name container=%container.name file=%fd.name)
+  priority: HIGH
+  tags: [kubernetes, secrets, mitre_credential_access]
+
+- rule: Container Running as Root
+  desc: Container process running as UID 0 — violates pod security policy
+  condition: >
+    spawned_process and
+    container and
+    user.uid = 0 and
+    not container.name in (known_admin_containers) and
+    not container.image.repository in (prom/prometheus, grafana/grafana)
+  output: >
+    Container running as root (container=%container.name user=%user.name
+    image=%container.image.repository:%container.image.tag cmdline=%proc.cmdline)
+  priority: WARNING
+  tags: [container, privilege, mitre_privilege_escalation]

@@ -215,6 +215,215 @@ const PROJECTS = [
     path: 'tier-1-foundational/10-kubernetes-app-deployment',
   },
 
+  // ── Tier 4: Expert ───────────────────────────────────────────────
+  {
+    id: '31',
+    title: 'Custom Kubernetes Operator',
+    tier: 'tier-4',
+    icon: '⚙️',
+    summary: 'Go operator using controller-runtime manages a WebApp CRD: creates Deployment, Service, Ingress, and HPA automatically. Finalizer ensures clean deletion. Status conditions integrate with ArgoCD health checks.',
+    problem: 'Every team writes the same boilerplate K8s manifests — an operator codifies platform standards into a self-service CRD.',
+    skills: ['go', 'kubernetes', 'operator', 'controller-runtime'],
+    files: [
+      'api/v1alpha1/webapp_types.go      — CRD Go types with kubebuilder markers',
+      'controllers/webapp_controller.go  — reconcile loop, finalizer, owned resources',
+      'config/crd/webapp.yaml            — generated CRD manifest',
+      'main.go                           — leader election entrypoint',
+    ],
+    decisions: [
+      'controller-runtime over raw client-go — handles informers, queue, rate limiting',
+      'Finalizer on WebApp — prevents orphaned Deployments on CR deletion',
+      'OwnerReference on child resources — automatic garbage collection',
+      'Status conditions (metav1.Condition) — standard pattern for kubectl wait + ArgoCD',
+    ],
+    path: 'tier-4-expert/31-k8s-operator',
+  },
+  {
+    id: '32',
+    title: 'Cluster API (CAPI) Lifecycle',
+    tier: 'tier-4',
+    icon: '🏗️',
+    summary: 'Declaratively provision, upgrade, and delete Kubernetes clusters on AWS using Cluster API. ClusterClass defines standards; MachineHealthCheck auto-replaces unhealthy nodes in < 5 minutes.',
+    problem: 'eksctl/Terraform cluster provisioning is ad-hoc — CAPI makes cluster lifecycle a GitOps-able Kubernetes object.',
+    skills: ['cluster-api', 'aws', 'kubernetes', 'infrastructure'],
+    files: [
+      'clusters/staging-cluster.yaml   — Cluster, AWSCluster, KubeadmControlPlane',
+      'workers/machine-deployment.yaml — MachineDeployment + MachineHealthCheck',
+      'scripts/bootstrap.sh            — management cluster setup',
+    ],
+    decisions: [
+      'ClusterClass — one template stamps many clusters with enforced standards',
+      'MachineHealthCheck — auto-remediate NotReady nodes, maxUnhealthy: 33%',
+      'NLB for API server — health-checks during control plane upgrades',
+      'SSM agent on nodes — no bastion host needed for emergency access',
+    ],
+    path: 'tier-4-expert/32-cluster-api',
+  },
+  {
+    id: '33',
+    title: 'FinOps with Kubecost',
+    tier: 'tier-4',
+    icon: '💰',
+    summary: 'Real-time Kubernetes cost allocation per namespace/team/label. Spot instance cost attribution, rightsizing recommendations, weekly Slack report, and budget alerts before overspend.',
+    problem: 'Engineers want to know what their service costs; AWS Cost Explorer only gives 24-hour delayed, per-account data.',
+    skills: ['kubecost', 'finops', 'aws', 'grafana', 'cost'],
+    files: [
+      'k8s/kubecost-values.yaml     — Helm values: AWS CUR, spot feed, labels',
+      'scripts/cost-report.sh       — weekly namespace cost summary to Slack',
+      'scripts/rightsize.sh         — fetch rightsizing recommendations',
+    ],
+    decisions: [
+      'Kubecost over AWS Cost Explorer — per-pod granularity, < 5 minute latency',
+      'Spot instance awareness — attribution reflects actual price paid, not on-demand',
+      'cost-center label — chargeback to business units, not just namespaces',
+      'Grafana integration — no new tool; cost data in existing dashboards',
+    ],
+    path: 'tier-4-expert/33-finops-kubecost',
+  },
+  {
+    id: '34',
+    title: 'OpenTelemetry Unified Observability',
+    tier: 'tier-4',
+    icon: '🔭',
+    summary: 'OTel Collector DaemonSet + Gateway routes traces to Jaeger, metrics to Prometheus, logs to Loki. Auto-instrumentation injects OTel agents via InitContainer — zero code changes in applications.',
+    problem: 'Three separate agents (Jaeger, Prometheus exporter, Fluent Bit) per pod means 3x overhead with no correlation between signals.',
+    skills: ['opentelemetry', 'observability', 'tracing', 'kubernetes'],
+    files: [
+      'k8s/collector-config.yaml   — full pipeline: receivers, processors, exporters',
+      'k8s/instrumentation.yaml    — auto-instrument Node.js, Python, Java, Go',
+    ],
+    decisions: [
+      'DaemonSet agent + Gateway pattern — agent stays close to data; gateway batches',
+      'Tail sampling at gateway — keep 100% errors, 1% successful traces',
+      'W3C TraceContext propagation — standard traceparent header across all languages',
+      'OTLP over Zipkin/Jaeger wire format — native OTel, no translation loss',
+    ],
+    path: 'tier-4-expert/34-opentelemetry',
+  },
+  {
+    id: '35',
+    title: 'Backstage Internal Developer Portal',
+    tier: 'tier-4',
+    icon: '🏛️',
+    summary: 'Backstage IDP with software catalog, TechDocs, and a scaffolder template that bootstraps a new microservice (GitHub repo + CI + ArgoCD app + monitoring) in under 5 minutes.',
+    problem: 'New engineers spend their first week figuring out "how do I create a service here?" — Backstage collapses that into a 5-minute self-service workflow.',
+    skills: ['backstage', 'platform-engineering', 'developer-experience', 'idp'],
+    files: [
+      'catalog/catalog-info.yaml                    — service + API + resource entries',
+      'templates/new-microservice/template.yaml     — scaffolder template (GitHub + ArgoCD)',
+    ],
+    decisions: [
+      'catalog-info.yaml co-located in each repo — single source of truth',
+      'GitHub autodiscovery — scans org for catalog-info.yaml, no manual registration',
+      'Scaffolder creates ArgoCD app — service is immediately deployable, not days later',
+      'S3 for TechDocs — CI pre-builds docs, served statically (no runtime mkdocs)',
+    ],
+    path: 'tier-4-expert/35-backstage-idp',
+  },
+  {
+    id: '36',
+    title: 'Flux v2 GitOps Multi-Environment',
+    tier: 'tier-4',
+    icon: '🌊',
+    summary: 'Flux v2 watches Git, reconciles cluster state, and automates image tag updates. New image tags are detected, a PR is opened, and merging triggers production promotion — with full audit trail in Git.',
+    problem: 'ArgoCD is push-to-cluster; Flux is pull-from-Git with native image automation for tag promotion workflows.',
+    skills: ['flux', 'gitops', 'kubernetes', 'helm'],
+    files: [
+      'apps/base/api-helmrelease.yaml              — HelmRelease with version constraint',
+      'image-automation/image-policy.yaml          — semver filter + ImageUpdateAutomation',
+      'clusters/production/flux-system/gotk-sync.yaml',
+    ],
+    decisions: [
+      'Image automation opens PRs, not direct push — review step before production',
+      'Semver policy >=1.0.0 <2.0.0 — prevents accidental major version promotion',
+      'Separate clusters/ per environment — each cluster reconciles its own path',
+      'HelmRelease over raw manifests — Helm upgrade/rollback managed by Flux',
+    ],
+    path: 'tier-4-expert/36-flux-gitops',
+  },
+  {
+    id: '37',
+    title: 'Falco Runtime Security',
+    tier: 'tier-4',
+    icon: '🦅',
+    summary: 'Falco uses eBPF probes to detect: shell spawned in container, sensitive file reads, cryptominer processes, unexpected outbound connections. Alerts route to Slack (High) and PagerDuty (Critical).',
+    problem: 'Image scanning catches vulnerabilities before deploy but not runtime exploitation — only syscall-level detection catches lateral movement at 2am.',
+    skills: ['falco', 'ebpf', 'security', 'kubernetes', 'runtime'],
+    files: [
+      'rules/custom-rules.yaml    — 7 detection rules with MITRE ATT&CK tags',
+      'k8s/falco-values.yaml      — eBPF driver, Falcosidekick, PagerDuty routing',
+    ],
+    decisions: [
+      'eBPF driver — no kernel module signing required on managed K8s nodes',
+      'Custom rules over defaults alone — tune to environment, reduce false positives',
+      'Falcosidekick for routing — 50+ output targets without custom webhook code',
+      'Priority-based routing — Critical → PagerDuty immediately; Warning → Slack',
+    ],
+    path: 'tier-4-expert/37-falco-security',
+  },
+  {
+    id: '38',
+    title: 'SLO/Error Budget Tracking',
+    tier: 'tier-4',
+    icon: '📊',
+    summary: 'Sloth generates correct multi-window burn rate alert rules from declarative SLO YAML. Two SLOs: 99.9% availability + 99% latency p95 < 500ms. Error budget policy defines team response at 50%/25%/0%.',
+    problem: '"Is the system up?" is the wrong question — "How much error budget remains?" drives better engineering prioritization decisions.',
+    skills: ['slo', 'prometheus', 'sloth', 'sre', 'alerting'],
+    files: [
+      'slos/api-slos.yaml              — PrometheusServiceLevel CR (availability + latency)',
+      'alerts/error-budget-policy.yaml — team response playbook at each threshold',
+    ],
+    decisions: [
+      'Sloth over manual PromQL — generates correct multi-window rules; manual is error-prone',
+      '30-day rolling window — aligns with monthly business reviews',
+      'Two-window burn rate alerts (1h fast + 6h slow) — catches all failure modes',
+      'Alert on burn rate not error rate — normalized across traffic levels',
+    ],
+    path: 'tier-4-expert/38-slo-error-budget',
+  },
+  {
+    id: '39',
+    title: 'RBAC Audit & Least-Privilege',
+    tier: 'tier-4',
+    icon: '🔐',
+    summary: 'Audit cluster RBAC with kubectl-access-matrix and audit2rbac. Replace wildcard ClusterRoles with namespace-scoped least-privilege Roles. Run kube-bench CIS benchmark. Score: > 80% PASS.',
+    problem: 'Most clusters have developers with cluster-admin and service accounts with wildcard permissions — a compromised pod can read all Secrets.',
+    skills: ['kubernetes', 'rbac', 'security', 'compliance', 'cis'],
+    files: [
+      'rbac/namespace-roles.yaml      — developer, ci-deployer, observer Roles',
+      'scripts/audit-rbac.sh          — wildcard finder + access matrix report',
+      'kube-bench/job.yaml            — CIS benchmark Job on control plane node',
+    ],
+    decisions: [
+      'Group bindings not user bindings — survives team changes and offboarding',
+      'Namespace-scoped Roles over ClusterRoles — limits blast radius per service',
+      'Disable default SA token automounting — opt-in instead of opt-out',
+      'audit2rbac workflow — generate minimal permissions from real audit log',
+    ],
+    path: 'tier-4-expert/39-rbac-audit',
+  },
+  {
+    id: '40',
+    title: 'Multi-Region Active-Active',
+    tier: 'tier-4',
+    icon: '🌍',
+    summary: 'Two regions (us-east-1 + eu-west-1) run identical stacks. Route53 latency routing directs users to nearest region. RDS Global Database replicates < 1 second. Automatic failover in < 60 seconds with zero DNS change.',
+    problem: 'Single-region deployments fail completely during AWS regional outages — active-active provides both low global latency and automatic failover.',
+    skills: ['aws', 'terraform', 'multi-region', 'route53', 'rds'],
+    files: [
+      'terraform/main.tf              — multi-provider: two regions + Route53 + RDS Global',
+      'terraform/modules/region/main.tf — per-region: EKS, ALB, RDS, S3',
+      'scripts/failover.sh            — promote secondary RDS, verify new endpoint',
+    ],
+    decisions: [
+      'Active-active over active-passive — EU users get < 50ms latency, not 200ms via US',
+      'Route53 latency routing + health checks — automatic failover without manual DNS',
+      'RDS Global Database — < 1s RPO, 1-minute promotion time for regional failover',
+      'Separate Terraform workspaces — region isolation; US failure doesn\'t affect EU apply',
+    ],
+    path: 'tier-4-expert/40-multi-region',
+  },
+
   // ── Tier 3: Advanced ─────────────────────────────────────────────
   {
     id: '21',
@@ -696,11 +905,13 @@ function renderProjects(filter) {
   const tier1Heading = document.getElementById('tier-1-heading');
   const tier2Heading = document.getElementById('tier-2-heading');
   const tier3Heading = document.getElementById('tier-3-heading');
+  const tier4Heading = document.getElementById('tier-4-heading');
   const showAll = filter === 'all';
   comingSoon.style.display = showAll ? '' : 'none';
   tier1Heading.style.display = showAll ? '' : 'none';
   tier2Heading.style.display = showAll ? '' : 'none';
   tier3Heading.style.display = showAll ? '' : 'none';
+  tier4Heading.style.display = showAll ? '' : 'none';
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────

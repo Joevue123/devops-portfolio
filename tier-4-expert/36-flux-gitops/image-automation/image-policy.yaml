@@ -1,0 +1,57 @@
+---
+# Watch the container registry for new image tags
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: api
+  namespace: flux-system
+spec:
+  image: ghcr.io/myorg/api
+  interval: 5m
+  secretRef:
+    name: ghcr-credentials
+---
+# Filter tags to semver >=1.0.0 <2.0.0 (no prereleases)
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: api
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: api
+  filterTags:
+    pattern: '^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$'
+    extract: '$major.$minor.$patch'
+  policy:
+    semver:
+      range: ">=1.0.0 <2.0.0"
+---
+# When a new tag is detected, update the image tag in Git and open a PR
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: fluxcdbot@example.com
+        name: FluxCD Bot
+      messageTemplate: |
+        chore(image): update {{range .Updated.Images}}{{.Repository}} to {{.NewTag}}{{end}}
+
+        Updated by image-update-automation.
+    push:
+      branch: image-update/api    # push to branch, not main — triggers PR
+  update:
+    path: ./apps
+    strategy: Setters             # finds {"$imagepolicy": ...} markers in YAML

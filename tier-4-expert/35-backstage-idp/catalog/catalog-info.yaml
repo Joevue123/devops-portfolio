@@ -1,0 +1,62 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-api
+  description: Handles payment processing, refunds, and transaction history
+  annotations:
+    github.com/project-slug: myorg/payment-api
+    backstage.io/techdocs-ref: dir:.
+    pagerduty.com/service-id: P12345
+    datadoghq.com/dashboard-url: https://app.datadoghq.com/dashboard/abc-123
+    sonarqube.org/project-key: payment-api
+  tags:
+    - payments
+    - critical
+    - nodejs
+  links:
+    - url: https://api.example.com/docs
+      title: API Documentation
+      icon: web
+    - url: https://grafana.example.com/d/payments
+      title: Grafana Dashboard
+      icon: dashboard
+    - url: https://runbook.example.com/payment-api
+      title: Runbook
+      icon: help
+spec:
+  type: service
+  lifecycle: production
+  owner: group:payments-team
+  domain: payments
+  system: checkout
+  dependsOn:
+    - resource:payments-postgres-db
+    - component:fraud-detection-api
+    - resource:payment-events-queue
+  providesApis:
+    - payment-api-v2
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: payment-api-v2
+  description: REST API for payment processing
+  tags: [payments, rest, openapi]
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:payments-team
+  definition:
+    $text: ./api-spec.yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: payments-postgres-db
+  description: Primary PostgreSQL database for payment records
+  tags: [database, postgresql]
+spec:
+  type: database
+  lifecycle: production
+  owner: group:platform-team
+  system: checkout

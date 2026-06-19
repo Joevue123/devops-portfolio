@@ -1,0 +1,121 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: new-microservice
+  title: New Microservice
+  description: Creates a production-ready Node.js microservice with GitHub repo, CI pipeline, ArgoCD app, and monitoring
+  tags: [nodejs, recommended, golden-path]
+spec:
+  owner: group:platform-team
+  type: service
+
+  parameters:
+    - title: Service Info
+      required: [name, description, owner]
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Lowercase, hyphenated (e.g. payment-api)
+          pattern: '^[a-z][a-z0-9-]{2,39}$'
+        description:
+          title: Description
+          type: string
+        owner:
+          title: Owning Team
+          type: string
+          ui:field: OwnerPicker
+          ui:options:
+            allowedKinds: [Group]
+        domain:
+          title: Domain
+          type: string
+          enum: [payments, notifications, auth, catalog, shipping]
+        lifecycle:
+          title: Lifecycle
+          type: string
+          enum: [experimental, production]
+          default: experimental
+
+    - title: Infrastructure
+      properties:
+        database:
+          title: Database
+          type: string
+          enum: [none, postgres, dynamodb]
+          default: none
+        queue:
+          title: Message Queue
+          type: boolean
+          default: false
+          description: Provision an SQS queue and DLQ
+
+    - title: Hosting
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: GitHub Repository
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts: [github.com]
+            allowedOrganizations: [myorg]
+
+  steps:
+    - id: fetch-template
+      name: Fetch Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          domain: ${{ parameters.domain }}
+          database: ${{ parameters.database }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}
+
+    - id: publish-github
+      name: Create GitHub Repository
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        repoVisibility: private
+        topics: [${{ parameters.domain }}, nodejs, kubernetes]
+        requiredStatusCheckContexts: [lint, test, build]
+        dismissStaleReviews: true
+        requireCodeOwnerReviews: true
+
+    - id: create-argocd-app
+      name: Register in ArgoCD
+      action: argocd:create-application
+      input:
+        appName: ${{ parameters.name }}
+        argoInstance: production
+        projectName: ${{ parameters.domain }}
+        repoUrl: ${{ steps['publish-github'].output.remoteUrl }}
+        path: k8s/overlays/staging
+        namespace: ${{ parameters.name }}
+        syncPolicy:
+          automated:
+            prune: true
+            selfHeal: true
+
+    - id: register-catalog
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish-github'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+
+  output:
+    links:
+      - title: GitHub Repository
+        url: ${{ steps['publish-github'].output.remoteUrl }}
+      - title: Backstage Catalog
+        icon: catalog
+        entityRef: ${{ steps['register-catalog'].output.entityRef }}
+      - title: ArgoCD Application
+        url: https://argocd.example.com/applications/${{ parameters.name }}

@@ -1,0 +1,78 @@
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: api-service-slos
+  namespace: monitoring
+  labels:
+    team: platform
+    service: api
+spec:
+  service: api
+  labels:
+    owner: platform-team
+    env: production
+  slos:
+    # ── Availability SLO ─────────────────────────────────────────────────────
+    - name: requests-availability
+      objective: 99.9
+
+      description: >
+        99.9% of API requests must return a non-5xx response.
+        Error budget: 43 minutes per 30-day window.
+
+      sli:
+        events:
+          errorQuery: >
+            sum(rate(http_requests_total{job="api",code=~"5.."}[{{.window}}]))
+          totalQuery: >
+            sum(rate(http_requests_total{job="api"}[{{.window}}]))
+
+      alerting:
+        name: APIHighErrorRate
+        labels:
+          category: availability
+        annotations:
+          summary: "API error rate exceeding SLO burn rate"
+          runbook: "https://runbook.example.com/api-availability"
+        pageAlert:
+          labels:
+            severity: critical
+            pagerduty_service: api-production
+        ticketAlert:
+          labels:
+            severity: warning
+
+    # ── Latency SLO ──────────────────────────────────────────────────────────
+    - name: requests-latency-p95
+      objective: 99.0
+
+      description: >
+        99% of API requests must complete within 500ms (p95 < 500ms).
+
+      sli:
+        events:
+          errorQuery: >
+            sum(rate(http_request_duration_seconds_bucket{
+              job="api",
+              le="0.5",
+              code!~"5.."
+            }[{{.window}}]))
+          totalQuery: >
+            sum(rate(http_request_duration_seconds_count{
+              job="api",
+              code!~"5.."
+            }[{{.window}}]))
+
+      alerting:
+        name: APIHighLatency
+        labels:
+          category: latency
+        annotations:
+          summary: "API p95 latency exceeding 500ms SLO"
+          runbook: "https://runbook.example.com/api-latency"
+        pageAlert:
+          labels:
+            severity: critical
+        ticketAlert:
+          labels:
+            severity: warning

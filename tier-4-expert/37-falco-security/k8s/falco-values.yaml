@@ -1,0 +1,66 @@
+driver:
+  kind: ebpf    # no kernel module signing required on managed K8s
+
+falco:
+  grpc:
+    enabled: true
+    bindAddress: "unix:///var/run/falco/falco.sock"
+  grpcOutput:
+    enabled: true
+
+  # Extra rules from ConfigMap
+  rulesFiles:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/k8s_audit_rules.yaml
+    - /etc/falco/rules.d    # mounts custom-rules ConfigMap here
+
+  # Kubernetes audit log source
+  k8sAudit:
+    enabled: true
+
+  jsonOutput: true
+  jsonIncludeOutputProperty: true
+  logLevel: info
+
+# Kubernetes audit webhook (send audit events to Falco)
+k8sAudit:
+  enabled: true
+  dynamicBackend:
+    enabled: true
+
+# Mount custom rules ConfigMap
+extraVolumes:
+  - name: custom-rules
+    configMap:
+      name: falco-custom-rules
+
+extraVolumeMounts:
+  - name: custom-rules
+    mountPath: /etc/falco/rules.d
+    readOnly: true
+
+falcosidekick:
+  enabled: true
+  replicaCount: 2
+  config:
+    slack:
+      webhookurl: ""        # set via Secret
+      minimumpriority: high
+      messageformat: "long"
+    pagerduty:
+      routingkey: ""        # set via Secret
+      minimumpriority: critical
+    prometheusexporter:
+      port: 2802
+  webui:
+    enabled: true
+    replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1024Mi

@@ -1,0 +1,93 @@
+---
+# Developer role — deploy and debug apps in their namespace, not cluster-wide
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer
+  namespace: production
+rules:
+  # Read app resources
+  - apiGroups: [""]
+    resources: [pods, services, configmaps, endpoints, persistentvolumeclaims]
+    verbs: [get, list, watch]
+  # Execute into pods (debugging)
+  - apiGroups: [""]
+    resources: [pods/exec, pods/portforward, pods/log]
+    verbs: [create, get]
+  # Manage deployments
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, statefulsets]
+    verbs: [get, list, watch, update, patch]
+  # Read HPA
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch]
+  # Read ingress
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  # Explicitly deny: Secrets (devs use ESO/Vault, not direct Secret access)
+  # Explicitly deny: ServiceAccounts, Roles, RoleBindings (no privilege escalation)
+---
+# CI/CD service account role — deploy only, no read of sensitive resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ci-deployer
+  namespace: production
+rules:
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets]
+    verbs: [get, list, update, patch]
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [get, list, create, update, patch]
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list]
+---
+# Read-only role for monitoring/observability tools
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: observer
+  namespace: production
+rules:
+  - apiGroups: ["", apps, autoscaling, batch, networking.k8s.io]
+    resources: [pods, services, deployments, replicasets, nodes,
+                configmaps, endpoints, events, horizontalpodautoscalers,
+                jobs, cronjobs, ingresses, persistentvolumeclaims]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+---
+# Bind developer role to team group (not individual users)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developers
+  namespace: production
+subjects:
+  - kind: Group
+    name: engineering:backend    # comes from OIDC groups claim
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Bind CI deployer to the GitOps service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ci-deployer
+  namespace: production
+subjects:
+  - kind: ServiceAccount
+    name: argocd-application-controller
+    namespace: argocd
+roleRef:
+  kind: Role
+  name: ci-deployer
+  apiGroup: rbac.authorization.k8s.io

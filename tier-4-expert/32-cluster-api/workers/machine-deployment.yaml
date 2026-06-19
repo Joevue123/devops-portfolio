@@ -1,0 +1,94 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: staging-workers
+  namespace: capi-clusters
+  annotations:
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: "2"
+    cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: "20"
+spec:
+  clusterName: staging
+  replicas: 3
+  selector:
+    matchLabels: {}
+  template:
+    metadata:
+      labels:
+        node-role: worker
+    spec:
+      clusterName: staging
+      version: v1.30.0
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: staging-worker-bootstrap
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        name: staging-workers
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0    # zero-downtime worker upgrades
+      maxSurge: 1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: staging-workers
+  namespace: capi-clusters
+spec:
+  template:
+    spec:
+      instanceType: m5.2xlarge
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      rootVolume:
+        size: 100
+        type: gp3
+        encrypted: true
+      spotMarketOptions:
+        maxPrice: ""    # pay up to on-demand price for spot
+      ami:
+        lookupType: AmazonLinux2
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: staging-worker-bootstrap
+  namespace: capi-clusters
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            max-pods: "110"
+      preKubeadmCommands:
+        - |
+          # Install SSM agent for secure access without bastion
+          yum install -y amazon-ssm-agent
+          systemctl enable amazon-ssm-agent --now
+---
+# Auto-replace unhealthy workers
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: staging-workers-health
+  namespace: capi-clusters
+spec:
+  clusterName: staging
+  selector:
+    matchLabels:
+      node-role: worker
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 300s
+    - type: Ready
+      status: "False"
+      timeout: 300s
+  maxUnhealthy: "25%"
+  nodeStartupTimeout: 10m

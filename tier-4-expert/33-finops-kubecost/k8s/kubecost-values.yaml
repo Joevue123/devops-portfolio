@@ -1,0 +1,63 @@
+global:
+  prometheus:
+    enabled: true    # use bundled Prometheus; set false to use existing
+  grafana:
+    enabled: false   # integrate with existing Grafana instead
+    proxy: false
+
+kubecostToken: ""    # set for Kubecost Enterprise features
+
+# AWS-specific pricing configuration
+kubecostProductConfigs:
+  clusterName: production
+  projectID: "123456789012"    # AWS account ID
+  provider: AWS
+  region: us-east-1
+  awsSpotDataRegion: us-east-1
+  awsSpotDataBucket: my-spot-data-feed    # S3 bucket for spot feed
+  awsSpotDataPrefix: kubecost
+  athenaProjectID: "123456789012"
+  athenaBucketName: s3://my-cur-bucket
+  athenaRegion: us-east-1
+  athenaDatabase: athenacurcfn
+  athenaTable: my_cost_and_usage_report
+  currencyCode: USD
+
+# Cost allocation by label
+allocationDefaultIdle: true    # allocate idle resources proportionally
+
+# Labels to use for cost center allocation
+networkCosts:
+  enabled: true
+  podMonitor:
+    enabled: true
+
+prometheus:
+  server:
+    retention: 30d
+    persistentVolume:
+      enabled: true
+      size: 50Gi
+      storageClass: gp3
+
+# Savings recommendations
+savings:
+  enabled: true
+
+# Alert when namespace cost exceeds threshold
+alerts:
+  enabled: true
+  globalSlackWebhookUrl: "https://hooks.slack.com/services/T00/B00/XXXX"
+  globalAlertEmails: ["finops@example.com"]
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/KubecostRole
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 2Gi
