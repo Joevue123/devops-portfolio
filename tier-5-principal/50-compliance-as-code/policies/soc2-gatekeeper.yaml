@@ -1,0 +1,135 @@
+---
+# CC8.1 / CIS 5.2.1 — Prohibit privileged containers
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdenyprivileged
+  annotations:
+    soc2-control: "CC8.1"
+    cis-benchmark: "5.2.1"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDenyPrivileged
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdenyprivileged
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          c.securityContext.privileged == true
+          msg := sprintf("Container '%v' must not run privileged. SOC2 CC8.1.", [c.name])
+        }
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }
+        input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+        }
+---
+apiVersion: k8sdenyprivileged.constraints.gatekeeper.sh/v1beta1
+kind: K8sDenyPrivileged
+metadata:
+  name: deny-privileged-production
+  annotations:
+    soc2-control: "CC8.1"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Pod]
+    namespaceSelector:
+      matchLabels:
+        compliance.example.com/enforced: "true"
+  parameters: {}
+---
+# CC6.1 — Require non-root containers
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequirenonroot
+  annotations:
+    soc2-control: "CC6.1"
+    cis-benchmark: "5.2.6"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequireNonRoot
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequirenonroot
+        violation[{"msg": msg}] {
+          c := input_containers[_]
+          not container_runs_as_nonroot(c)
+          msg := sprintf(
+            "Container '%v' must set securityContext.runAsNonRoot=true. SOC2 CC6.1.",
+            [c.name]
+          )
+        }
+        container_runs_as_nonroot(c) {
+          c.securityContext.runAsNonRoot == true
+        }
+        container_runs_as_nonroot(c) {
+          c.securityContext.runAsUser > 0
+        }
+        input_containers[c] {
+          c := input.review.object.spec.containers[_]
+        }
+---
+apiVersion: k8srequirenonroot.constraints.gatekeeper.sh/v1beta1
+kind: K8sRequireNonRoot
+metadata:
+  name: require-nonroot-production
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Pod]
+    namespaceSelector:
+      matchLabels:
+        compliance.example.com/enforced: "true"
+---
+# CC6.7 — Require read-only root filesystem
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequirereadonlyfs
+  annotations:
+    soc2-control: "CC6.7"
+    cis-benchmark: "5.4.1"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequireReadOnlyFS
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequirereadonlyfs
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.securityContext.readOnlyRootFilesystem == true
+          msg := sprintf(
+            "Container '%v' must set readOnlyRootFilesystem=true. SOC2 CC6.7.",
+            [c.name]
+          )
+        }
+---
+apiVersion: k8srequirereadonlyfs.constraints.gatekeeper.sh/v1beta1
+kind: K8sRequireReadOnlyFS
+metadata:
+  name: require-readonly-fs-production
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [Pod]
+    namespaceSelector:
+      matchLabels:
+        compliance.example.com/enforced: "true"

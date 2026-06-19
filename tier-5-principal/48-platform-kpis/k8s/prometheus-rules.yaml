@@ -1,0 +1,98 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: platform-kpis
+  namespace: monitoring
+  labels:
+    prometheus: platform
+spec:
+  groups:
+    - name: platform.adoption
+      interval: 5m
+      rules:
+        # % of namespaces with a catalog-info.yaml registered in Backstage
+        - record: platform:backstage_catalog_coverage:ratio
+          expr: |
+            count(kube_namespace_labels{label_backstage_registered="true"})
+            /
+            count(kube_namespace_labels{label_team!=""})
+
+        # % of deployments using approved base image prefixes
+        - record: platform:approved_image_ratio:ratio
+          expr: |
+            count(kube_pod_container_info{image=~"(gcr.io/distroless|cgr.dev/chainguard|ghcr.io/myorg).*"})
+            /
+            count(kube_pod_container_info{namespace!~"kube-.*|monitoring|argocd"})
+
+        # Deployments using the golden path Helm chart
+        - record: platform:golden_path_adoption:ratio
+          expr: |
+            count(label_replace(
+              kube_deployment_labels{label_helm_chart=~"myapp-.*"},
+              "deployment", "$0", "deployment", ".*"
+            ))
+            /
+            count(kube_deployment_labels{namespace!~"kube-.*|monitoring"})
+
+    - name: platform.reliability
+      interval: 1m
+      rules:
+        # ArgoCD sync success rate (last 24h)
+        - record: platform:argocd_sync_success:ratio24h
+          expr: |
+            sum(increase(argocd_app_sync_total{phase="Succeeded"}[24h]))
+            /
+            sum(increase(argocd_app_sync_total[24h]))
+
+        # CI pipeline success rate (from GitHub Actions metrics)
+        - record: platform:ci_success_rate:ratio7d
+          expr: |
+            sum(increase(github_actions_workflow_run_total{conclusion="success"}[7d]))
+            /
+            sum(increase(github_actions_workflow_run_total[7d]))
+
+        # Vault availability (secret reads succeeding)
+        - record: platform:vault_availability:ratio5m
+          expr: |
+            1 - (
+              sum(rate(vault_core_failed_auth_total[5m]))
+              /
+              sum(rate(vault_core_requests_total[5m]))
+            )
+
+    - name: platform.efficiency
+      interval: 15m
+      rules:
+        # Average CI duration (P50 and P95)
+        - record: platform:ci_duration_p50_seconds
+          expr: histogram_quantile(0.50, sum by (le) (rate(github_actions_job_duration_seconds_bucket[7d])))
+
+        - record: platform:ci_duration_p95_seconds
+          expr: histogram_quantile(0.95, sum by (le) (rate(github_actions_job_duration_seconds_bucket[7d])))
+
+        # Cost per namespace (from Kubecost)
+        - record: platform:cost_per_namespace_monthly_usd
+          expr: |
+            sum by (namespace) (
+              kubecost_cluster_costs_minute * 60 * 24 * 30
+            )
+
+    - name: platform.alerts
+      rules:
+        - alert: PlatformGoldenPathAdoptionLow
+          expr: platform:golden_path_adoption:ratio < 0.6
+          for: 1h
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Golden path adoption below 60% — action needed"
+            description: "Current adoption: {{ $value | humanizePercentage }}. Target: 80%."
+
+        - alert: ArgocdSyncSuccessRateLow
+          expr: platform:argocd_sync_success:ratio24h < 0.99
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "ArgoCD sync success rate below 99%"

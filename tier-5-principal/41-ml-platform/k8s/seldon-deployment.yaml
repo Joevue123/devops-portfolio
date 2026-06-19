@@ -1,0 +1,45 @@
+apiVersion: machinelearning.seldon.io/v1
+kind: SeldonDeployment
+metadata:
+  name: fraud-detector
+  namespace: ml-serving
+spec:
+  protocol: v2
+  predictors:
+    # Production traffic (90%)
+    - name: production
+      traffic: 90
+      graph:
+        name: fraud-model
+        type: MODEL
+        implementation: MLFLOW_SERVER
+        modelUri: s3://my-mlflow-artifacts/fraud-detector/production
+        envSecretRefName: aws-credentials
+      componentSpecs:
+        - spec:
+            containers:
+              - name: fraud-model
+                resources:
+                  requests: { cpu: "500m", memory: "1Gi" }
+                  limits:   { cpu: "2000m", memory: "2Gi" }
+            # No GPU needed for inference (batch-optimized model)
+
+    # Canary traffic (10%) — new model version
+    - name: canary
+      traffic: 10
+      graph:
+        name: fraud-model-v2
+        type: MODEL
+        implementation: MLFLOW_SERVER
+        modelUri: s3://my-mlflow-artifacts/fraud-detector/candidate
+        envSecretRefName: aws-credentials
+      componentSpecs:
+        - spec:
+            containers:
+              - name: fraud-model-v2
+                resources:
+                  requests: { cpu: "500m", memory: "1Gi" }
+                  limits:   { cpu: "2000m", memory: "2Gi" }
+
+  annotations:
+    seldon.io/engine-seldon-log-messages-externally: "true"

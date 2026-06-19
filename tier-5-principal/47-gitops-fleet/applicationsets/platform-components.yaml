@@ -1,0 +1,148 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-components
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: [missingkey=error]
+  generators:
+    - clusters:
+        selector:
+          matchExpressions:
+            - key: env
+              operator: In
+              values: [staging, production]
+        values:
+          revision: "main"
+  template:
+    metadata:
+      name: "platform-{{.name}}"
+      annotations:
+        notifications.argoproj.io/subscribe.on-sync-failed.slack: platform-alerts
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/myorg/platform-gitops
+        targetRevision: "{{.values.revision}}"
+        path: "platform/overlays/{{.metadata.labels.env}}"
+      destination:
+        server: "{{.server}}"
+        namespace: platform
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 5m
+  templatePatch: |
+    spec:
+      info:
+        - name: cluster
+          value: '{{.name}}'
+        - name: region
+          value: '{{.metadata.labels.region | default "unknown"}}'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: team-apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - matrix:
+        generators:
+          # All production clusters
+          - clusters:
+              selector:
+                matchLabels:
+                  env: production
+          # All directories under apps/ in gitops repo
+          - git:
+              repoURL: https://github.com/myorg/platform-gitops
+              revision: main
+              directories:
+                - path: "apps/production/*"
+  template:
+    metadata:
+      name: "{{.path.basename}}-{{.name}}"
+    spec:
+      project: "{{.path.basename | splitList `-` | first}}"
+      source:
+        repoURL: https://github.com/myorg/platform-gitops
+        targetRevision: main
+        path: "{{.path}}"
+      destination:
+        server: "{{.server}}"
+        namespace: "{{.path.basename}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+---
+# Addon matrix — ensure consistent addon versions across all clusters
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-addons
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchExpressions:
+                  - key: env
+                    operator: In
+                    values: [staging, production]
+          - list:
+              elements:
+                - addon: cert-manager
+                  chart: cert-manager
+                  repo: https://charts.jetstack.io
+                  version: "1.14.4"
+                  namespace: cert-manager
+                - addon: ingress-nginx
+                  chart: ingress-nginx
+                  repo: https://kubernetes.github.io/ingress-nginx
+                  version: "4.10.0"
+                  namespace: ingress-nginx
+                - addon: external-secrets
+                  chart: external-secrets
+                  repo: https://charts.external-secrets.io
+                  version: "0.9.0"
+                  namespace: external-secrets
+  template:
+    metadata:
+      name: "{{.addon}}-{{.name}}"
+    spec:
+      project: platform
+      source:
+        repoURL: "{{.repo}}"
+        chart: "{{.chart}}"
+        targetRevision: "{{.version}}"
+        helm:
+          valuesObject:
+            installCRDs: true
+      destination:
+        server: "{{.server}}"
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        automated:
+          prune: false    # don't auto-delete CRDs
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

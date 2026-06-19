@@ -72,9 +72,20 @@
 | 39 | [RBAC Audit & Least-Privilege](./tier-4-expert/39-rbac-audit/) | RBAC, kube-bench, CIS benchmark, audit2rbac |
 | 40 | [Multi-Region Active-Active](./tier-4-expert/40-multi-region/) | AWS, Route53, RDS Global, multi-region Terraform |
 
-## Tier 5 — Principal *(coming soon)*
+## Tier 5 — Principal
 
-Projects 41–50: Internal developer platform, AI/ML training infra, org-scale IaC modules, golden path templates.
+| # | Project | Skills |
+|---|---------|--------|
+| 41 | [AI/ML Platform on Kubernetes](./tier-5-principal/41-ml-platform/) | Kubeflow, MLflow, Seldon, GPU NodePool, Karpenter |
+| 42 | [DORA Metrics & Engineering Analytics](./tier-5-principal/42-dora-metrics/) | Prometheus, GitHub API, PagerDuty, Python |
+| 43 | [Terraform Module Registry](./tier-5-principal/43-terraform-modules/) | Terraform, Go, Terratest, AWS, module registry |
+| 44 | [Zero-Trust with SPIFFE/SPIRE](./tier-5-principal/44-zero-trust-spiffe/) | SPIRE, mTLS, workload identity, zero-trust |
+| 45 | [vCluster Multi-Tenancy](./tier-5-principal/45-vcluster-multitenancy/) | vCluster, k3s, multi-tenancy, platform engineering |
+| 46 | [Cloud Cost Optimization Framework](./tier-5-principal/46-cost-optimization/) | AWS Savings Plans, Spot, schedule scale-down, FinOps |
+| 47 | [GitOps Fleet Management](./tier-5-principal/47-gitops-fleet/) | ArgoCD, ApplicationSet, fleet management, multi-cluster |
+| 48 | [Platform Engineering KPIs](./tier-5-principal/48-platform-kpis/) | Prometheus, Grafana, platform metrics, DORA |
+| 49 | [Incident Response Automation](./tier-5-principal/49-incident-automation/) | Python, PagerDuty, Slack, runbooks, MTTR |
+| 50 | [Security Compliance as Code](./tier-5-principal/50-compliance-as-code/) | OPA, SOC2, Gatekeeper, CIS, evidence automation |
 
 ---
 

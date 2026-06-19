@@ -1,0 +1,86 @@
+---
+# GPU NodePool — spot-first p3/g4dn, scale-to-zero when idle
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: gpu
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: gpu
+        accelerator: nvidia
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: gpu
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [spot, on-demand]
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [p3, g4dn, g5]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: [xlarge, 2xlarge, 4xlarge]
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]
+      taints:
+        - key: nvidia.com/gpu
+          value: "true"
+          effect: NoSchedule
+      expireAfter: 48h    # force recycle; long-running training uses checkpoints
+  limits:
+    cpu: 256
+    memory: 2Ti
+  disruption:
+    consolidationPolicy: WhenEmpty    # only remove when no pods scheduled
+    consolidateAfter: 10m             # 10 min idle → node removed → $0 cost
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: gpu
+spec:
+  amiFamily: AL2
+  role: KarpenterNodeRole
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+        Tier: private
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 200Gi    # larger root volume for model artifacts
+        volumeType: gp3
+        encrypted: true
+  userData: |
+    #!/bin/bash
+    # Install NVIDIA drivers and container toolkit
+    /etc/eks/bootstrap.sh my-cluster
+    yum install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)
+    distribution=$(. /etc/os-release; echo $ID$VERSION_ID)
+    curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo \
+      | tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+    yum install -y nvidia-container-toolkit
+    systemctl restart containerd
+  tags:
+    ManagedBy: karpenter
+    NodeType: gpu
+---
+# Per-namespace GPU quota — prevents runaway costs
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: gpu-quota
+  namespace: ml-team
+spec:
+  hard:
+    requests.nvidia.com/gpu: "8"
+    limits.nvidia.com/gpu: "8"

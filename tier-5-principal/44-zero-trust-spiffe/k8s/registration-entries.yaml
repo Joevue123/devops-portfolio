@@ -1,0 +1,55 @@
+# SPIRE workload registration entries
+# Maps Kubernetes pod selectors to SPIFFE IDs
+---
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: production-api
+spec:
+  className: "spire"
+  spiffeIDTemplate: "spiffe://cluster.example.com/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: platform
+  namespaceSelector:
+    matchLabels:
+      spiffe.io/spire-managed: "true"
+  dnsNameTemplates:
+    - "{{ .PodMeta.Name }}.{{ .PodMeta.Namespace }}.svc.cluster.local"
+  ttl: "1h"
+---
+# Per-service entries for finer-grained policy
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: payment-api
+spec:
+  className: "spire"
+  spiffeIDTemplate: "spiffe://cluster.example.com/ns/production/sa/payment-api"
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: payment-api
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values: [production]
+  ttl: "1h"
+  admin: false
+---
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: fraud-detector
+spec:
+  className: "spire"
+  spiffeIDTemplate: "spiffe://cluster.example.com/ns/production/sa/fraud-detector"
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: fraud-detector
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values: [production]
+  ttl: "1h"

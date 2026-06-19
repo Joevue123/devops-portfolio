@@ -215,6 +215,209 @@ const PROJECTS = [
     path: 'tier-1-foundational/10-kubernetes-app-deployment',
   },
 
+  // ── Tier 5: Principal ────────────────────────────────────────────
+  {
+    id: '41',
+    title: 'AI/ML Platform on Kubernetes',
+    tier: 'tier-5',
+    icon: '🤖',
+    summary: 'GPU NodePool with Karpenter (scale-to-zero, p3/g4dn Spot). Kubeflow Pipelines orchestrate data prep → train → evaluate → register. Seldon serves models with 90/10 canary. Per-namespace GPU quota prevents runaway costs.',
+    problem: 'ML teams need on-demand GPU without idle instances burning $3/hr overnight — and data scientists shouldn\'t need to know Kubernetes.',
+    skills: ['kubernetes', 'gpu', 'mlflow', 'karpenter', 'seldon'],
+    files: [
+      'k8s/gpu-nodepool.yaml        — Karpenter NodePool: scale-to-zero GPU nodes',
+      'k8s/seldon-deployment.yaml   — 90/10 canary model serving',
+      'k8s/gpu-quota.yaml           — per-namespace GPU ResourceQuota',
+    ],
+    decisions: [
+      'Scale-to-zero GPU nodes — idle p3.2xlarge costs $3/hr; Karpenter removes it in 10 min',
+      'MLflow over Kubeflow model registry — simpler, language-agnostic, all frameworks',
+      'Seldon over plain Deployment — built-in A/B testing, shadow mode, explainability',
+      'S3 artifact store — unlimited storage, accessible from any region/cluster',
+    ],
+    path: 'tier-5-principal/41-ml-platform',
+  },
+  {
+    id: '42',
+    title: 'DORA Metrics & Engineering Analytics',
+    tier: 'tier-5',
+    icon: '📈',
+    summary: 'Automated DORA metrics: Deployment Frequency, Lead Time for Changes, MTTR, Change Failure Rate — collected from GitHub and PagerDuty, pushed to Prometheus, visualized in Grafana by team.',
+    problem: '"Are we getting faster and more reliable?" — DORA metrics answer this with data, not intuition.',
+    skills: ['dora', 'prometheus', 'github', 'pagerduty', 'python'],
+    files: [
+      'scripts/dora-collector.py   — polls GitHub + PagerDuty, pushes to Pushgateway',
+      'k8s/collector-cronjob.yaml  — runs every 15 minutes',
+    ],
+    decisions: [
+      'Prometheus Pushgateway — collector runs on schedule; push fits better than pull',
+      'GitHub API for lead time — commit timestamp → deploy timestamp, fully automated',
+      'PagerDuty for MTTR — incident open/close timestamps are authoritative',
+      'Per-team labels — hides nothing; surfaces underperforming teams clearly',
+    ],
+    path: 'tier-5-principal/42-dora-metrics',
+  },
+  {
+    id: '43',
+    title: 'Terraform Module Registry',
+    tier: 'tier-5',
+    icon: '📦',
+    summary: 'Private module registry: EKS, RDS, VPC modules with semantic versioning. Terratest provisions real AWS resources, asserts outputs, destroys. terraform-docs auto-generated. Zero wildcard IAM in any module.',
+    problem: 'Every team writes their own VPC/EKS Terraform — different security settings, different tagging. A registry enforces consistent, secure-by-default infrastructure.',
+    skills: ['terraform', 'go', 'terratest', 'aws', 'modules'],
+    files: [
+      'modules/eks/main.tf     — EKS: private API server, IRSA, secret encryption, addons',
+      'tests/eks_test.go       — Terratest: real EKS creation, node join, kube-system pods',
+    ],
+    decisions: [
+      'Git monorepo + tag versioning — modules/eks/v3.2.1 tags enable independent versioning',
+      'Terratest over mocked tests — catches IAM and service limit issues mocks cannot',
+      'terraform-docs in CI — documentation auto-generated from variables, never stale',
+      'Private API server by default — public=false; override requires explicit variable',
+    ],
+    path: 'tier-5-principal/43-terraform-modules',
+  },
+  {
+    id: '44',
+    title: 'Zero-Trust with SPIFFE/SPIRE',
+    tier: 'tier-5',
+    icon: '🔒',
+    summary: 'SPIRE issues every pod a short-lived X.509 SVID (1-hour TTL, auto-renewed). Services present certs in mTLS — no VPN, no static secrets, no service account tokens shared as credentials.',
+    problem: 'A stolen Kubernetes JWT is valid until expiry — SPIFFE gives workloads cryptographic identity that rotates every hour automatically.',
+    skills: ['spiffe', 'spire', 'zero-trust', 'mtls', 'security'],
+    files: [
+      'k8s/registration-entries.yaml  — ClusterSPIFFEID: pod labels → SPIFFE IDs',
+      'k8s/spiffe-csi-driver.yaml     — mount SVID as volume (no SDK needed)',
+    ],
+    decisions: [
+      'SPIRE over Vault PKI for workload identity — push-model; no polling required',
+      'AWS IID node attestor — no bootstrap secret; uses AWS signed identity document',
+      'SPIFFE CSI Driver — apps get cert via volume mount, zero SDK integration',
+      '1-hour SVID TTL — short blast radius; auto-renewed at 55 minutes',
+    ],
+    path: 'tier-5-principal/44-zero-trust-spiffe',
+  },
+  {
+    id: '45',
+    title: 'vCluster Multi-Tenancy',
+    tier: 'tier-5',
+    icon: '🏘️',
+    summary: 'Each team gets a full virtual Kubernetes cluster (k3s inside a StatefulSet). Teams install their own CRDs and operators. ResourceQuota on the host namespace caps their total consumption. Provisioned in < 3 minutes via Backstage.',
+    problem: '$150-300/month per dedicated cluster × 10 teams = $30K/year. vCluster gives full isolation at < 5% overhead.',
+    skills: ['vcluster', 'kubernetes', 'multitenancy', 'platform-engineering'],
+    files: [
+      'k8s/tenant-namespace.yaml      — host ns: ResourceQuota + NetworkPolicy isolation',
+      'scripts/provision-tenant.sh    — self-service: namespace + ArgoCD vCluster HelmRelease',
+    ],
+    decisions: [
+      'vCluster over namespace isolation — teams can install CRDs/operators in their vCluster',
+      'k3s as virtual control plane — single StatefulSet, < 500MB memory overhead',
+      'Syncer for Pod execution — Pods run on host nodes; no nested virtualization penalty',
+      'ArgoCD manages vCluster lifecycle — vCluster itself is a GitOps resource',
+    ],
+    path: 'tier-5-principal/45-vcluster-multitenancy',
+  },
+  {
+    id: '46',
+    title: 'Cloud Cost Optimization Framework',
+    tier: 'tier-5',
+    icon: '💹',
+    summary: 'Systematic approach: 1-year Compute Savings Plans (40% off), Spot for 60% of worker nodes (70% off), schedule-based scale-to-zero for non-production (58% off nights). Projected annual savings: ~$61K.',
+    problem: 'AWS bills grow 20-40% annually without active management — most savings come from three levers that teams rarely implement together.',
+    skills: ['aws', 'cost-optimization', 'spot', 'finops', 'terraform'],
+    files: [
+      'scripts/schedule-scale.sh     — scale dev/staging to 0 replicas at 8pm, restore 7am',
+      'scripts/spot-migration.sh     — migrate node group from on-demand to Spot',
+      'scripts/waste-finder.sh       — find idle EBS volumes, old snapshots, unused EIPs',
+    ],
+    decisions: [
+      'Compute Savings Plans over EC2 Reserved — flexible across instance types and sizes',
+      '1-year term over 3-year — recalibrate annually as workloads change',
+      'Spot for workers, on-demand for system nodes — CoreDNS needs stability',
+      'Scale-to-zero non-prod — dev/staging unused 14h/day → 58% compute reduction',
+    ],
+    path: 'tier-5-principal/46-cost-optimization',
+  },
+  {
+    id: '47',
+    title: 'GitOps Fleet Management',
+    tier: 'tier-5',
+    icon: '🚢',
+    summary: 'Single ArgoCD instance manages 20+ clusters via ApplicationSets. Platform components (cert-manager, Falco, ESO) deployed to every cluster from one config. New cluster auto-onboards in < 5 minutes after kubectl label.',
+    problem: 'Managing platform consistency across 20+ clusters by hand means version drift, missed security updates, and manual toil at scale.',
+    skills: ['argocd', 'gitops', 'applicationset', 'fleet', 'kubernetes'],
+    files: [
+      'applicationsets/platform-components.yaml  — cluster generator: one per env label',
+      'applicationsets/cluster-addons.yaml       — matrix generator: addons × clusters',
+    ],
+    decisions: [
+      'ApplicationSet over manual Applications — one change propagates to all clusters',
+      'Cluster generator from ArgoCD secrets — no separate inventory system needed',
+      'Matrix generator for addons — addon × cluster combinations auto-generated',
+      'selfHeal everywhere — drift auto-corrected within 1 reconcile cycle (< 2 min)',
+    ],
+    path: 'tier-5-principal/47-gitops-fleet',
+  },
+  {
+    id: '48',
+    title: 'Platform Engineering KPIs',
+    tier: 'tier-5',
+    icon: '🎯',
+    summary: 'Four KPI categories: Adoption (golden path %), Reliability (ArgoCD sync rate, Vault availability), DevEx (time-to-first-deploy, NPS), Efficiency (toil %, cost per env). Prometheus rules + Grafana dashboard.',
+    problem: 'A platform team without KPIs can\'t demonstrate ROI, can\'t detect adoption problems, and can\'t prioritize improvements with data.',
+    skills: ['prometheus', 'grafana', 'platform-engineering', 'observability', 'sre'],
+    files: [
+      'k8s/prometheus-rules.yaml  — recording rules for adoption, reliability, efficiency',
+    ],
+    decisions: [
+      'Platform team measures its own KPIs — accountability; platform is a product',
+      'Developer NPS — qualitative leading indicator alongside quantitative metrics',
+      'Toil tracking — quantifies automation ROI for engineering investment decisions',
+      'Weekly automated digest — managers see trend without pulling dashboards',
+    ],
+    path: 'tier-5-principal/48-platform-kpis',
+  },
+  {
+    id: '49',
+    title: 'Incident Response Automation',
+    tier: 'tier-5',
+    icon: '🚨',
+    summary: 'PagerDuty webhook → Slack war-room created in < 30 seconds with diagnostic data (pod status, error rate, recent deploys) already gathered. On resolution: timeline extracted, post-mortem GitHub issue pre-filled.',
+    problem: 'An on-call engineer at 2am wastes the first 5 minutes finding the runbook and creating a Slack channel — automation gives them a pre-populated war-room instead.',
+    skills: ['python', 'pagerduty', 'slack', 'kubernetes', 'automation'],
+    files: [
+      'scripts/incident-bot.py   — webhook handler: war-room + auto-diagnosis + resolution',
+      'runbooks/high-error-rate.yaml  — structured runbook with automated diagnostic steps',
+    ],
+    decisions: [
+      'Webhook-driven over polling — < 1 second from PagerDuty trigger to Slack channel',
+      'Structured runbooks (YAML) — machine-readable steps enable partial automation',
+      'Auto-silence related alerts — reduces noise so responders can focus on root cause',
+      'Post-mortem auto-generation — pre-fill timeline from Slack history; add RCA manually',
+    ],
+    path: 'tier-5-principal/49-incident-automation',
+  },
+  {
+    id: '50',
+    title: 'Security Compliance as Code',
+    tier: 'tier-5',
+    icon: '📋',
+    summary: 'SOC2 Type II controls enforced by OPA Gatekeeper (CC6.1 non-root, CC6.6 approved images, CC8.1 no privileged). Daily CronJob collects evidence, uploads to S3. Audit prep time: 2 hours instead of 2 weeks.',
+    problem: 'SOC2 audits require 12 months of continuous evidence — manual gathering is expensive, error-prone, and terrifies engineers every year.',
+    skills: ['opa', 'compliance', 'soc2', 'security', 'automation'],
+    files: [
+      'policies/soc2-gatekeeper.yaml     — OPA constraints for SOC2 CC6.1/CC6.7/CC8.1',
+      'scripts/compliance-report.sh      — daily evidence: kube-bench + RBAC + Falco + OPA',
+    ],
+    decisions: [
+      'OPA for preventive controls — admission webhook blocks non-compliant at creation time',
+      'Evidence in S3 with Object Lock — tamper-evident; auditors access S3, not cluster',
+      'Daily cadence — SOC2 Type II requires evidence over time, daily is sufficient',
+      'Control → SOC2 mapping in annotations — each policy maps to a specific control ID',
+    ],
+    path: 'tier-5-principal/50-compliance-as-code',
+  },
+
   // ── Tier 4: Expert ───────────────────────────────────────────────
   {
     id: '31',
@@ -901,17 +1104,17 @@ function renderProjects(filter) {
   });
 
   // Show/hide section headings and coming-soon based on filter
-  const comingSoon = document.getElementById('coming-soon');
   const tier1Heading = document.getElementById('tier-1-heading');
   const tier2Heading = document.getElementById('tier-2-heading');
   const tier3Heading = document.getElementById('tier-3-heading');
   const tier4Heading = document.getElementById('tier-4-heading');
+  const tier5Heading = document.getElementById('tier-5-heading');
   const showAll = filter === 'all';
-  comingSoon.style.display = showAll ? '' : 'none';
   tier1Heading.style.display = showAll ? '' : 'none';
   tier2Heading.style.display = showAll ? '' : 'none';
   tier3Heading.style.display = showAll ? '' : 'none';
   tier4Heading.style.display = showAll ? '' : 'none';
+  tier5Heading.style.display = showAll ? '' : 'none';
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
